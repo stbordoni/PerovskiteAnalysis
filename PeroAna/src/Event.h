@@ -4,27 +4,57 @@
 #include <vector>
 
 
+
 class Event {
 public:
-    Event();
+    //Event();
+   
+    Event(int evt, int chan, const std::vector<double>& wave);
     ~Event();
 
+    
     void Init();
     // Setter methods
-    void setEventId(int id);
-    void setChannelId(int ch);
+    void SetEventId(int id);
+    void SetChannelId(int ch);
+    
 
     //void setChannels(const std::vector<int>& channels);
 
     // Getter methods
-    int getEventId() const;
-    int getChannelId() const;
+    int GetEventId() const;
+    int GetChannelId() const;
+    const std::vector<double>* GetWaveform() const; 
+    const std::vector<double>* GetRawWaveform() const; 
+    void ComputeBaseline();
+    void SubtractBaseline();
+    void ComputeIntegral();
+    void FindMaxAmp();
     //const std::vector<int>& getChannels() const;
 
+
+    double baseline;
+    double integral;
+    double maxAmp;
+    double ToT; 
+    std::vector<double>* Waveform;
+
+
 private:
+    
     int eventId;
     int channelId;
-    //std::vector<double> waveform;
+    float sampling_rate; 
+   
+    //int fcr;
+    //double baseline;
+    //double amplitude;
+    //double charge;
+    //double leadingEdgeTime;
+    //double trailingEdgeTime;
+    //double rateCounter;
+    std::vector<double>* rawWaveform =0;
+    
 };
 
 #endif // EVENT_H
