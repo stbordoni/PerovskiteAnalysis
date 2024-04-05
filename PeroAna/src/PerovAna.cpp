@@ -97,18 +97,20 @@ void analyzeData(const char* filename) {
         myevent.ComputeBaseline();
         myevent.SubtractBaseline();
 
+        myevent.ComputeIntegral();
+        myevent.FindMaxAmp();
 
         // to printout the waveform
-        for (int isample =0; isample<myevent.GetRawWaveform()->size(); isample++ )
-            std::cout << myevent.GetRawWaveform()->at(isample) << " " ;
-        std::cout << "\n " << std::endl;
+        //for (int isample =0; isample<myevent.GetRawWaveform()->size(); isample++ )
+        //    std::cout << myevent.GetRawWaveform()->at(isample) << " " ;
+        //std::cout << "\n " << std::endl;
 
 
-        for (int isample =0; isample<myevent.GetWaveform()->size(); isample++ )
-            std::cout << myevent.GetWaveform()->at(isample) << " " ;
-        std::cout << "\n " << std::endl;
+        //for (int isample =0; isample<myevent.GetWaveform()->size(); isample++ )
+        //    std::cout << myevent.GetWaveform()->at(isample) << " " ;
+        //std::cout << "\n " << std::endl;
 
-
+        std::cout << "integral " << myevent.integral << " maxAmp  " << myevent.maxAmp << std::endl; 
     }
 
     // Close the file
@@ -117,7 +119,7 @@ void analyzeData(const char* filename) {
 
 int main() {
     // Replace "output.root" with the actual name of your output file
-    analyzeData("/Users/bordonis/ResearchActivities/PeroAna/rootinputfiles/Run_BR300_Data_1_24_2024_Ascii_Am003_output.root");
+    analyzeData("/Users/bordonis/ResearchActivities/PerovskiteAnalysis/PeroAna/rootinputfiles/Run_BR300_Data_1_24_2024_Ascii_Am003_output.root");
     
     return 0;
 }

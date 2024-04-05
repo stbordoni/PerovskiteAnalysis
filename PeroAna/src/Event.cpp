@@ -79,7 +79,8 @@ void Event::SubtractBaseline(){
 
 void Event::ComputeIntegral(){
     integral = 0;
-    for(int i=0;i<1024;i++) integral += Waveform->at(i)*sampling_rate/50.; //this is pC 
+    //for(int i=0;i<1024;i++) integral += Waveform->at(i)*sampling_rate/50.; //this is pC 
+    for(int i=0;i<1024;i++) integral += Waveform->at(i);  // for the moment without conversion
 }
 
 void Event::FindMaxAmp(){
