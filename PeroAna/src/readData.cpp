@@ -33,17 +33,20 @@ struct EventData {
 bool readHeaderInfo(std::ifstream& fileStream, HeaderInfo& headerInfo) {
     std::string line;
     while (std::getline(fileStream, line)) {
+        //std::cout << line << std::endl;
         if (line.find("=== DATA FILE SAVED WITH SOFTWARE VERSION: V") != std::string::npos) {
             sscanf(line.c_str(), "=== DATA FILE SAVED WITH SOFTWARE VERSION: V%s ===", &headerInfo.softwareVersion);
         }
-        if (line.find("=== UnixTime") != std::string::npos) {
-            sscanf(line.c_str(), "=== UnixTime = %*f date = %*f time = %*s == TDC = %d =", &headerInfo.tdcValue);
-            return true; // Header information is successfully read
-        }
+        //if (line.find("=== UnixTime") != std::string::npos) {
+        //    sscanf(line.c_str(), "=== UnixTime = %*f date = %*f time = %*s == TDC = %d =", &headerInfo.tdcValue);
+        //    return true; // Header information is successfully read
+        //}
         if (line.find("=== DATA SAMPLES") != std::string::npos) {
             sscanf(line.c_str(), "=== DATA SAMPLES [%*d] in Volts == NB OF CHANNELS ACQUIRED: %d == Sampling Period: %lf ===",
                    &headerInfo.NChannels, &headerInfo.samplingPeriod);
+            return true;
         }
+        
     }
     return false; // Header information not found
 }
@@ -53,11 +56,16 @@ bool readHeaderInfo(std::ifstream& fileStream, HeaderInfo& headerInfo) {
 
 bool readEventData(std::ifstream& fileStream, EventData& eventData) {
     std::string line;
+    
     while (std::getline(fileStream, line)) {
+        
         if (line.find("=== EVENT") != std::string::npos) {
             sscanf(line.c_str(), "=== EVENT %d ===", &eventData.event);
             
+
             std::getline(fileStream, line);
+            //std::cout << " read this line " << std::endl;
+            //std::cout<< line << std::endl;
             // Add code to parse UnixTime if needed
 
             // Read the line with channelId separately
@@ -66,7 +74,7 @@ bool readEventData(std::ifstream& fileStream, EventData& eventData) {
                     &eventData.channelId, &eventData.fcr, &eventData.baseline, &eventData.amplitude,
                     &eventData.charge, &eventData.leadingEdgeTime, &eventData.trailingEdgeTime, &eventData.rateCounter);
 
-                //std::cout << "  event " << eventData.event << "  ch " << eventData.channelId << std::endl;
+                //std::cout << "  event " << eventData.event << "  ch " << eventData.channelId  <<   std::endl;
 
                 // Assuming your data samples are on the next line, modify as needed
                 if (std::getline(fileStream, line)) {
@@ -78,12 +86,12 @@ bool readEventData(std::ifstream& fileStream, EventData& eventData) {
                 }
 
                 //std::cout <<  eventData.dataSamples.size() << std::endl;
-                if (eventData.event < 2 ){
-                    for (int isample =0; isample < eventData.dataSamples.size(); isample++)
-                        std::cout << eventData.dataSamples.at(isample) << " \t ";
+                //if (eventData.event < 4 ){
+                //    for (int isample =0; isample < eventData.dataSamples.size(); isample++)
+                //        std::cout << eventData.dataSamples.at(isample) << " ";
                 
-                std::cout << std::endl;
-                }
+                //std::cout << std::endl;
+                //}
 
                 // Successfully read an event, return true
                 return true;
@@ -92,8 +100,11 @@ bool readEventData(std::ifstream& fileStream, EventData& eventData) {
                 return false;
             }
         }
+        
+
     }
 
+   
     // No event found
     return false;
 }
@@ -146,12 +157,17 @@ int main(int argc, char* argv[]) {
     eventTree.Branch("rateCounter", &eventData.rateCounter);
     eventTree.Branch("dataSamples", &eventData.dataSamples);
 
+    std::cout << " Reading the input file   "  << std::endl;
     // Read and fill event data
+    int eventcounter = 0;
     while (readEventData(inputFile, eventData)) {
+        eventcounter++;
+
         eventTree.Fill();
         // Clear data samples for the next event
         eventData.dataSamples.clear();
     }
+    std::cout << " Found  " << eventcounter << " events in the input file " << std::endl;
 
     // Write trees to the output file
     headerTree.Write();

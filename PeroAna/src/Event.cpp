@@ -56,7 +56,7 @@ void Event::ComputeBaseline(){
 
     double sum = 0;
     int start = 5;
-    int end = start+100;
+    int end = start+50;
     for(int i=start;i<end;i++) 
         sum += rawWaveform->at(i);
     

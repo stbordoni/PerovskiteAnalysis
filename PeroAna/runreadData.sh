@@ -7,8 +7,8 @@ if [ "$#" -ne 1 ]; then
 fi
 
 # Set the input directory and output directory
-input_dir="/Users/bordonis/ResearchActivities/Perovskite/data"
-output_dir="/Users/bordonis/ResearchActivities/PeroAna/rootinputfiles"
+input_dir="/Users/bordonis/ResearchActivities/Perovskite/data/PCB_box/CERNdata"
+rootfile_dir="/Users/bordonis/ResearchActivities/PerovskiteAnalysis/PeroAna/rootinputfiles"
 
 # Get the input file name from the command line argument
 input_file="$1"
@@ -18,7 +18,7 @@ base_name=$(basename -- "$input_file")
 base_name_no_ext="${base_name%.*}"
 
 # Set the output file name with the output directory
-output_file="$output_dir/${base_name_no_ext}_output.root"
+rootfile_path="$rootfile_dir/${base_name_no_ext}_output.root"
 
 
 # Create build directory if not exists
@@ -33,15 +33,45 @@ make
 
 # Check if compilation was successful
 if [ $? -eq 0 ]; then
+    ################################################
+    # Execute the code
+    cd src/ || exit; # executable is here
+
     # Run the compiled program with the input and output file names
-    ./readData "$input_dir/$input_file" "$output_file"
+    ./readData "$input_dir/$input_file" "$rootfile_path"
 
     # Check if execution was successful
     if [ $? -eq 0 ]; then
-        echo "Program executed successfully. Output saved to $output_file"
+        echo "Program executed successfully. Output saved to $rootfile_path"
     else
         echo "Error: Program execution failed."
     fi
 else
     echo "Error: Compilation failed."
+fi
+
+echo "Currently we are in"
+pwd
+echo ""
+
+echo "Now executing the analysis code"
+
+
+
+if [ $? -eq 0 ]; then
+    ################################################
+    # Execute the code
+    #cd src/ || exit; # executable is here
+    
+    #here are analysis options
+    display_waveforms=false
+
+    # Run the analysis
+    echo $display_waveforms
+
+    ./PerovAna $rootfile_path $display_waveforms
+    #./PerovAna
+    echo "Analysis code successfully executed. All done! "
+else
+    echo "Error: Execution failed."
 fi

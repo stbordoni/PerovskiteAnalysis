@@ -1,6 +1,9 @@
 #include <TFile.h>
 #include <TTree.h>
+#include <TCanvas.h>
+#include <TH1.h>
 #include <iostream>
+#include "TApplication.h"
 
 #include "Event.h"
 
@@ -31,13 +34,43 @@ struct EventData {
     
 };
 
-void analyzeData(const char* filename) {
+
+
+
+//void analyzeData(const char* filename, bool displaywave) {
+int main(int argc, char *argv[]){
+    
+    std::cout << "found " << argc << " arguments " << std::endl;
+    for (int iarg=0; iarg <argc; iarg++)
+        std::cout << "argv["  << iarg << "]" <<argv[iarg] << std::endl; 
+
+    char* filename=argv[1];
+    bool displaywave;
+    if (argv[2]=="true")
+        displaywave=true;
+    else
+        displaywave=false;
+    //char* filename="/Users/bordonis/ResearchActivities/PerovskiteAnalysis/PeroAna/rootinputfiles/Run_BR300_Data_1_24_2024_Ascii_Am003_output.root";
+    //char* filename="/Users/bordonis/ResearchActivities/PerovskiteAnalysis/PeroAna/rootinputfiles/Run_000_bulkMAPbBr3_Data_3_15_2024_Ascii_output.root";
+    //bool displaywave=false;
+    
+    std::cout << "Running analysis on file " << filename <<std::endl;
+    std::cout << "Drawing waveforms " << displaywave << std::endl;
+
+    //////////////////////////////////////////////////////////////
+    // ROOT app and objects to read the data in the Run
+    auto *app = new TApplication("myapp", &argc, argv);
+    //auto *app = new TApplication();
+
+
+    std::cout << "display wave " << displaywave << std::endl;
+
     // Open the ROOT file
     TFile *file = new TFile(filename, "READ");
     
     if (!file || file->IsZombie()) {
         std::cerr << "Error: Unable to open file " << filename << std::endl;
-        return;
+        return 1;
     }
 
     
@@ -46,7 +79,7 @@ void analyzeData(const char* filename) {
     if (!headerTree) {
         std::cerr << "Error: Header tree not found in file " << filename << std::endl;
         file->Close();
-        return;
+        return 1;
     }
 
     HeaderInfo headerInfo;
@@ -65,7 +98,7 @@ void analyzeData(const char* filename) {
     if (!eventTree) {
         std::cerr << "Error: Event tree not found in file " << filename << std::endl;
         file->Close();
-        return;
+        return 1;
     }
 
     EventData eventData;
@@ -77,11 +110,15 @@ void analyzeData(const char* filename) {
 
     // ...
 
+    TH1F* h_baseline = new TH1F("h_baseline","", 250, 10, 10);
+    TH1F* h_maxAmp   = new TH1F("h_maxAmp","", 250, 10, 10);
+    TH1F* h_integral = new TH1F("h_integral","", 100, 10,10);
+
     // Loop over entries in the event tree
     Long64_t nEntries = eventTree->GetEntries();
     std::cout << "entries " << nEntries << std::endl;
 
-    for (Long64_t ievt = 0; ievt < 3; ievt++) {
+    for (Long64_t ievt = 0; ievt < nEntries; ievt++) {
          std::cout << "====== EVENT " << ievt << "======" << std::endl;
     //for (Long64_t ievt = 0; ievt < nEntries; ievt++) {
         if ((ievt+1)%100 == 0) 
@@ -92,7 +129,7 @@ void analyzeData(const char* filename) {
         //if (ievt ==0)
         Event myevent(eventData.event, eventData.channelId, *eventData.dataSamples);
         
-        std::cout << " evt  " << myevent.GetEventId() << "  ch " <<  myevent.GetChannelId() << " size  "<< myevent.GetRawWaveform()->size()<< std::endl;
+        //std::cout << " evt  " << myevent.GetEventId() << "  ch " <<  myevent.GetChannelId() << " size  "<< myevent.GetRawWaveform()->size()<< std::endl;
         
         myevent.ComputeBaseline();
         myevent.SubtractBaseline();
@@ -111,15 +148,56 @@ void analyzeData(const char* filename) {
         //std::cout << "\n " << std::endl;
 
         std::cout << "integral " << myevent.integral << " maxAmp  " << myevent.maxAmp << std::endl; 
+        h_baseline->Fill(myevent.baseline);
+        h_maxAmp->Fill(myevent.maxAmp);
+        h_integral->Fill(myevent.integral);
+
+        if (displaywave){
+                std::cout << "--- CH " << myevent.GetChannelId() << " ---" << std::endl;
+                TH1F* h_waveform = new TH1F("h_waveform","", 1024,0,1023);
+                for(int isample=0; isample<1024; isample++){
+                    if (isample>10) h_waveform->SetBinContent(isample,myevent.GetRawWaveform()->at(isample));
+                    else      h_waveform->SetBinContent(isample,0); // prevent first bins with strange values to be shown.
+                    //if(w<10) cout << w << ", " << kv.second->Waveform[w] << endl;
+                }
+            
+                TCanvas* c = new TCanvas("c", "c", 600, 500);
+                c->cd();
+                h_waveform->Draw("HIST");
+                //h_waveform->GetXaxis()->SetRangeUser(0,200);
+                c->Update();
+                c->WaitPrimitive();
+
+                delete h_waveform; delete c;
+            
+            }   
+
     }
 
-    // Close the file
-    file->Close();
-}
 
-int main() {
-    // Replace "output.root" with the actual name of your output file
-    analyzeData("/Users/bordonis/ResearchActivities/PerovskiteAnalysis/PeroAna/rootinputfiles/Run_BR300_Data_1_24_2024_Ascii_Am003_output.root");
     
+    TCanvas* c1 = new TCanvas("c1", "c1", 1200, 1000);
+    c1->Divide(3,2);   
+    c1->cd(1);
+    h_baseline->Draw();
+    c1->cd(2);
+    h_maxAmp->Draw();
+    c1->cd(3);
+    h_integral->Draw();
+
+    // Close the file
+    //file->Close();
+    
+
+    app->Run();    
     return 0;
 }
+
+//int main() {
+
+//    bool displaywave = true;
+    // Replace "output.root" with the actual name of your output file
+//    analyzeData("/Users/bordonis/ResearchActivities/PerovskiteAnalysis/PeroAna/rootinputfiles/Run_BR300_Data_1_24_2024_Ascii_Am003_output.root", displaywave);
+    
+//    return 0;
+//}
