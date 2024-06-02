@@ -90,21 +90,27 @@ void Event::ComputeMovingAverage(int step){
 }
 
 
-void Event::ComputeBaseline(){
+void Event::ComputeBaseline(bool _removenoise){
 
     double sum = 0;
     int start = 5;
     int end = start+50;
-    for(int i=start;i<end;i++) 
-        sum += rawWaveform->at(i);
-    
+    for(int i=start;i<end;i++) {
+        if (! _removenoise)
+            sum += rawWaveform->at(i);
+        else 
+            sum += avgWaveform->at(i);
+    }
     baseline = sum/(end-start);
     
 }
 
 
-void Event::SubtractBaseline(){
-        Waveform = new std::vector<double>(*rawWaveform);
+void Event::SubtractBaseline(bool _removenoise){
+        if (! _removenoise)
+            Waveform = new std::vector<double>(*rawWaveform);
+        else 
+            Waveform = new std::vector<double>(*avgWaveform);
 
         for(int i=0;i<Waveform->size();i++) {
             (*Waveform)[i] -= baseline;

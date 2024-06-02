@@ -28,8 +28,8 @@ public:
     const std::vector<double>* GetRawWaveform() const; 
     const std::vector<double>* GetAvgMeanWaveform() const; 
     void ComputeMovingAverage(int step=5);
-    void ComputeBaseline();
-    void SubtractBaseline();
+    void ComputeBaseline(bool _removenoise);
+    void SubtractBaseline(bool _removenoise);
     void ComputeIntegral();
     void FindMaxAmp();
     //const std::vector<int>& getChannels() const;

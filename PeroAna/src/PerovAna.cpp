@@ -50,13 +50,15 @@ int main(int argc, char *argv[]){
         displaywave=true;
     else
         displaywave=false;
-    //char* filename="/Users/bordonis/ResearchActivities/PerovskiteAnalysis/PeroAna/rootinputfiles/Run_BR300_Data_1_24_2024_Ascii_Am003_output.root";
-    //char* filename="/Users/bordonis/ResearchActivities/PerovskiteAnalysis/PeroAna/rootinputfiles/Run_000_bulkMAPbBr3_Data_3_15_2024_Ascii_output.root";
-    //bool displaywave=false;
     
     std::cout << "Running analysis on file " << filename <<std::endl;
     std::cout << "Drawing waveforms " << displaywave << std::endl;
 
+    bool remove_noise = true;
+    if (remove_noise)
+       std::cout << " Remove noise routine  applied : moving average " << std::endl;
+    else
+        std::cout << " Using raw waveforms" << std::endl;
     //////////////////////////////////////////////////////////////
     // ROOT app and objects to read the data in the Run
     auto *app = new TApplication("myapp", &argc, argv);
@@ -137,9 +139,11 @@ int main(int argc, char *argv[]){
         else{
         //std::cout << " evt  " << myevent.GetEventId() << "  ch " <<  myevent.GetChannelId() << " size  "<< myevent.GetRawWaveform()->size()<< std::endl;
         
+            std::cout << "Removing noise applying a moving average with step @ 10" << std::endl;
+
             myevent.ComputeMovingAverage(10);
-            myevent.ComputeBaseline();
-            myevent.SubtractBaseline();
+            myevent.ComputeBaseline(remove_noise);
+            myevent.SubtractBaseline(remove_noise);
 
             myevent.ComputeIntegral();
             myevent.FindMaxAmp();
@@ -193,7 +197,7 @@ int main(int argc, char *argv[]){
     }
 
 
-    /*
+    
     TCanvas* c1 = new TCanvas("c1", "c1", 1200, 1000);
     c1->Divide(3,2);   
     c1->cd(1);
@@ -202,7 +206,7 @@ int main(int argc, char *argv[]){
     h_maxAmp->Draw();
     c1->cd(3);
     h_integral->Draw();
-    */
+    
     // Close the file
     //file->Close();
     
