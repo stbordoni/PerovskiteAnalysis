@@ -46,7 +46,7 @@ int main(int argc, char *argv[]){
 
     char* filename=argv[1];
     bool displaywave;
-    if (argv[2]=="true")
+    if (std::string(argv[2])=="true")
         displaywave=true;
     else
         displaywave=false;
@@ -118,9 +118,9 @@ int main(int argc, char *argv[]){
     Long64_t nEntries = eventTree->GetEntries();
     std::cout << "entries " << nEntries << std::endl;
 
-    for (Long64_t ievt = 0; ievt < nEntries; ievt++) {
-         std::cout << "====== EVENT " << ievt << "======" << std::endl;
-    //for (Long64_t ievt = 0; ievt < nEntries; ievt++) {
+    for (Long64_t ievt = 0; ievt < 500; ievt++) {
+         //std::cout << "====== EVENT " << ievt << "======" << std::endl;
+        //for (Long64_t ievt = 0; ievt < nEntries; ievt++) {
         if ((ievt+1)%100 == 0) 
             std::cout << "====== EVENT " << ievt+1 << "======" << std::endl;
         
@@ -129,53 +129,71 @@ int main(int argc, char *argv[]){
         //if (ievt ==0)
         Event myevent(eventData.event, eventData.channelId, *eventData.dataSamples);
         
+        if (myevent.GetRawWaveform()->size()<1024){
+            std::cout << "Error on Event " <<  myevent.GetEventId() << ": waveform corrupted (<1024 samples) --> "<< myevent.GetRawWaveform()->size()  << std::endl;
+            continue;
+
+        } 
+        else{
         //std::cout << " evt  " << myevent.GetEventId() << "  ch " <<  myevent.GetChannelId() << " size  "<< myevent.GetRawWaveform()->size()<< std::endl;
         
-        myevent.ComputeBaseline();
-        myevent.SubtractBaseline();
+            myevent.ComputeMovingAverage(10);
+            myevent.ComputeBaseline();
+            myevent.SubtractBaseline();
 
-        myevent.ComputeIntegral();
-        myevent.FindMaxAmp();
+            myevent.ComputeIntegral();
+            myevent.FindMaxAmp();
 
-        // to printout the waveform
-        //for (int isample =0; isample<myevent.GetRawWaveform()->size(); isample++ )
-        //    std::cout << myevent.GetRawWaveform()->at(isample) << " " ;
-        //std::cout << "\n " << std::endl;
+            // to printout the waveform
+            //for (int isample =0; isample<myevent.GetRawWaveform()->size(); isample++ )
+            //    std::cout << myevent.GetRawWaveform()->at(isample) << " " ;
+            //std::cout << "\n " << std::endl;
 
 
-        //for (int isample =0; isample<myevent.GetWaveform()->size(); isample++ )
-        //    std::cout << myevent.GetWaveform()->at(isample) << " " ;
-        //std::cout << "\n " << std::endl;
+            //std::cout << "integral " << myevent.integral << " maxAmp  " << myevent.maxAmp << std::endl; 
+            h_baseline->Fill(myevent.baseline);
+            h_maxAmp->Fill(myevent.maxAmp);
+            h_integral->Fill(myevent.integral);
 
-        std::cout << "integral " << myevent.integral << " maxAmp  " << myevent.maxAmp << std::endl; 
-        h_baseline->Fill(myevent.baseline);
-        h_maxAmp->Fill(myevent.maxAmp);
-        h_integral->Fill(myevent.integral);
-
-        if (displaywave){
+            if (displaywave){
                 std::cout << "--- CH " << myevent.GetChannelId() << " ---" << std::endl;
                 TH1F* h_waveform = new TH1F("h_waveform","", 1024,0,1023);
+                TH1F* h_AvgMeanwaveform = new TH1F("h_AvgMeanwaveform","", 1024,0,1023);
+                h_AvgMeanwaveform->SetLineColor(2);
+                h_AvgMeanwaveform->SetLineWidth(3);
+                
+
                 for(int isample=0; isample<1024; isample++){
-                    if (isample>10) h_waveform->SetBinContent(isample,myevent.GetRawWaveform()->at(isample));
-                    else      h_waveform->SetBinContent(isample,0); // prevent first bins with strange values to be shown.
+                    if (isample>10) {
+                    h_waveform->SetBinContent(isample,myevent.GetRawWaveform()->at(isample)); //raw waveform
+                    h_AvgMeanwaveform->SetBinContent(isample,myevent.GetAvgMeanWaveform()->at(isample)); //averaged mean waveform
+                    }
+                    else  {
+                    h_waveform->SetBinContent(isample,0); // prevent first bins with strange values to be shown.
+                    h_AvgMeanwaveform->SetBinContent(isample,0);
                     //if(w<10) cout << w << ", " << kv.second->Waveform[w] << endl;
+                    }
                 }
-            
-                TCanvas* c = new TCanvas("c", "c", 600, 500);
+                
+                TCanvas* c = new TCanvas("c", "c", 1000, 700);
                 c->cd();
                 h_waveform->Draw("HIST");
-                //h_waveform->GetXaxis()->SetRangeUser(0,200);
+                h_AvgMeanwaveform->Draw("HISTsame");
+                    //h_waveform->GetXaxis()->SetRangeUser(0,200);
                 c->Update();
                 c->WaitPrimitive();
 
-                delete h_waveform; delete c;
-            
-            }   
+                delete h_waveform; 
+                delete h_AvgMeanwaveform; 
+                delete c;
+                
+            }
+        }   
 
     }
 
 
-    
+    /*
     TCanvas* c1 = new TCanvas("c1", "c1", 1200, 1000);
     c1->Divide(3,2);   
     c1->cd(1);
@@ -184,7 +202,7 @@ int main(int argc, char *argv[]){
     h_maxAmp->Draw();
     c1->cd(3);
     h_integral->Draw();
-
+    */
     // Close the file
     //file->Close();
     

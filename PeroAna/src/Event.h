@@ -26,6 +26,8 @@ public:
     int GetChannelId() const;
     const std::vector<double>* GetWaveform() const; 
     const std::vector<double>* GetRawWaveform() const; 
+    const std::vector<double>* GetAvgMeanWaveform() const; 
+    void ComputeMovingAverage(int step=5);
     void ComputeBaseline();
     void SubtractBaseline();
     void ComputeIntegral();
@@ -38,6 +40,7 @@ public:
     double maxAmp;
     double ToT; 
     std::vector<double>* Waveform;
+    std::vector<double>* avgWaveform;
 
 
 private:

@@ -64,7 +64,7 @@ if [ $? -eq 0 ]; then
     #cd src/ || exit; # executable is here
     
     #here are analysis options
-    display_waveforms=false
+    display_waveforms=true
 
     # Run the analysis
     echo $display_waveforms
