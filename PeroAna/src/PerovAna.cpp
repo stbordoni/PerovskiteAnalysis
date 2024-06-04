@@ -122,14 +122,19 @@ int main(int argc, char *argv[]){
     TH1F* h_baseline = new TH1F("h_baseline","", 250, 10, 10);
     TH1F* h_maxAmp   = new TH1F("h_maxAmp","", 250, 10, 10);
     TH1F* h_integral = new TH1F("h_integral","", 100, 10,10);
+    TH1F* h_peakInt  = new TH1F("h_peakInt", "", 100, 10,10);
+    
+    TH1F* h_waveform = new TH1F("h_waveform","", 1024,0,1023);
+    TH1F* h_AvgMeanwaveform = new TH1F("h_AvgMeanwaveform","", 1024,0,1023);
 
     // Loop over entries in the event tree
     Long64_t nEntries = eventTree->GetEntries();
     std::cout << "entries " << nEntries << std::endl;
 
-    for (Long64_t ievt = 0; ievt < 500; ievt++) {
-         //std::cout << "====== EVENT " << ievt << "======" << std::endl;
-        //for (Long64_t ievt = 0; ievt < nEntries; ievt++) {
+    
+    //for (Long64_t ievt = 0; ievt < 500; ievt++) {
+    for (Long64_t ievt = 0; ievt < nEntries-1; ievt++) {
+
         if ((ievt+1)%100 == 0) 
             std::cout << "====== EVENT " << ievt+1 << "======" << std::endl;
         
@@ -141,7 +146,6 @@ int main(int argc, char *argv[]){
         if (myevent.GetRawWaveform()->size()<1024){
             std::cout << "Error on Event " <<  myevent.GetEventId() << ": waveform corrupted (<1024 samples) --> "<< myevent.GetRawWaveform()->size()  << std::endl;
             continue;
-
         } 
         else{
         
@@ -154,10 +158,11 @@ int main(int argc, char *argv[]){
             myevent.FindMaxAmp();
 
             // to printout the waveform
-            //for (int isample =0; isample<myevent.GetRawWaveform()->size(); isample++ )
-            //    std::cout << myevent.GetRawWaveform()->at(isample) << " " ;
-            //std::cout << "\n " << std::endl;
-
+            if (verbose){
+                for (int isample =0; isample<myevent.GetRawWaveform()->size(); isample++ )
+                    std::cout << myevent.GetRawWaveform()->at(isample) << " " ;
+                std::cout << "\n " << std::endl;
+            }
         
 
             //std::cout << "integral " << myevent.integral << " maxAmp  " << myevent.maxAmp << std::endl; 
@@ -165,8 +170,81 @@ int main(int argc, char *argv[]){
             h_maxAmp->Fill(myevent.maxAmp);
             h_integral->Fill(myevent.integral);
 
+
+            //ToDO: if it is possible to use TSpectrum over the array of values and not the histo 
+            //then remove all this histo part to the displaywave block
+
+            
+            h_AvgMeanwaveform->SetLineColor(1);
+            h_AvgMeanwaveform->SetLineWidth(3);
+            
+
+            for(int isample=0; isample<1024; isample++){
+                if (isample>10) {
+                h_waveform->SetBinContent(isample,myevent.GetRawWaveform()->at(isample)); //raw waveform
+                h_AvgMeanwaveform->SetBinContent(isample,myevent.GetAvgMeanWaveform()->at(isample)); //averaged mean waveform
+                }
+                else  {
+                h_waveform->SetBinContent(isample,0); // prevent first bins with strange values to be shown.
+                h_AvgMeanwaveform->SetBinContent(isample,0);
+                //if(w<10) cout << w << ", " << kv.second->Waveform[w] << endl;
+                }
+            }
+
+            //search for peaks in the waveform 
+            Int_t np=20;
+            Int_t npeaks = TMath::Abs(np);
+
+            Int_t ngoodpeaks =0;
+
+            // Use TSpectrum to find the peak candidates
+            TSpectrum *s = new TSpectrum(2*npeaks);
+            
+            Int_t nfound = s->Search(h_AvgMeanwaveform, 20, " ", 0.1);
+            if (verbose) printf("Found %d candidate peaks to fit\n",nfound);
+
+            Double_t *xpeaks;
+            xpeaks = s->GetPositionX();
+
+            for (Int_t p=0;p<nfound;p++) {
+                Double_t xp = xpeaks[p];
+
+                Int_t bin = h_AvgMeanwaveform->GetXaxis()->FindBin(xp);
+                Double_t yp = h_AvgMeanwaveform->GetBinContent(bin);
+
+                if (yp > 5*myevent.baseline) {
+                    ngoodpeaks++;
+                    if (verbose) std::cout << " found a good peak  x: " << xp << " ; y: " << yp << std::endl;
+
+                    // compute integral around the peak
+                    Int_t startI;
+                    Int_t stopI;
+                    double localI=0;
+                    Int_t Irange =10; 
+
+                    if ((xp- Irange/2) > 0)
+                        startI = xp-Irange/2;
+                    else
+                        startI = 0;
+
+                    if ((xp+Irange/2) < myevent.avgWaveform->size())
+                        stopI = xp+Irange/2;
+                    else
+                        stopI = myevent.avgWaveform->size();
+
+                    for (int isample = startI; isample<stopI; isample++){
+                        localI += myevent.avgWaveform->at(isample);
+                    } 
+                    h_peakInt->Fill(localI);
+                }
+            }
+
+            if (verbose) std::cout << "found " << ngoodpeaks << " good peaks (i.e. x5*baseline)" << std::endl;
+
+            // routine to display the waveforms one by one and monitor the peak searches
             if (displaywave){
-                std::cout << "--- CH " << myevent.GetChannelId() << " ---" << std::endl;
+                //std::cout << "--- CH " << myevent.GetChannelId() << " ---" << std::endl;
+                /*
                 TH1F* h_waveform = new TH1F("h_waveform","", 1024,0,1023);
                 TH1F* h_AvgMeanwaveform = new TH1F("h_AvgMeanwaveform","", 1024,0,1023);
                 h_AvgMeanwaveform->SetLineColor(1);
@@ -183,23 +261,24 @@ int main(int argc, char *argv[]){
                     h_AvgMeanwaveform->SetBinContent(isample,0);
                     //if(w<10) cout << w << ", " << kv.second->Waveform[w] << endl;
                     }
-                }
+                }*/
                 
                 TCanvas* c = new TCanvas("c", "c", 1000, 700);
                 c->cd();
-                h_waveform->Draw("HIST");
-                h_waveform->GetYaxis()->SetRangeUser(0,0.1);
-                h_AvgMeanwaveform->Draw("HISTsame");
+                //h_waveform->Draw("HIST");
+                
+                h_AvgMeanwaveform->Draw("HIST");
+                h_AvgMeanwaveform->GetYaxis()->SetRangeUser(-0.002,0.03);
 
                 //search for peaks in the waveform 
-                Int_t np=20;
-                Int_t npeaks = TMath::Abs(np);
+                //Int_t np=20;
+                //Int_t npeaks = TMath::Abs(np);
 
                 // Use TSpectrum to find the peak candidates
-                TSpectrum *s = new TSpectrum(2*npeaks);
+                //TSpectrum *s = new TSpectrum(2*npeaks);
                 
-                Int_t nfound = s->Search(h_AvgMeanwaveform, 20, " ", 0.1);
-                printf("Found %d candidate peaks to fit\n",nfound);
+                //Int_t nfound = s->Search(h_AvgMeanwaveform, 20, " ", 0.1);
+                //if (verbose) printf("Found %d candidate peaks to fit\n",nfound);
 
                 //TH1 *hb = s->Background(h_AvgMeanwaveform,20,"same");
                 h_waveform->Draw("HISTsame");
@@ -231,7 +310,9 @@ int main(int argc, char *argv[]){
     h_maxAmp->Draw();
     c1->cd(3);
     h_integral->Draw();
-    
+    c1->cd(4);
+    h_peakInt->Draw();
+
     // Close the file
     //file->Close();
     
