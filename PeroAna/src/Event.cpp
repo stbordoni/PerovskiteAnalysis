@@ -127,6 +127,36 @@ void Event::ComputeIntegral(){
     for(int i=0;i<Waveform->size();i++) integral += Waveform->at(i);  // for the moment without conversion
 }
 
+
+double Event::ComputeLocalIntegral(int xbin, int Irange ){
+    
+    double localI = 0;
+   
+    // compute integral around the peak
+    int startI;
+    int stopI;
+    //double localI=0;
+    //Int_t Irange =10; 
+
+    if ((xbin- Irange/2) > 0)
+        startI = xbin-Irange/2;
+    else
+        startI = 0;
+
+    if ((xbin+Irange/2) < avgWaveform->size())
+        stopI = xbin+Irange/2;
+    else
+        stopI = avgWaveform->size();
+
+    //if (verbose) std::cout  << " bin " << xbin << " startI " << startI << "  stopI " << stopI <<std::endl;
+    for (int isample = startI; isample<stopI; isample++){
+        localI += avgWaveform->at(isample);
+    } 
+
+    return localI; 
+}
+
+
 void Event::FindMaxAmp(){
     maxAmp = *max_element(Waveform->begin(), Waveform->end());
 

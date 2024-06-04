@@ -31,6 +31,7 @@ public:
     void ComputeBaseline(bool _removenoise);
     void SubtractBaseline(bool _removenoise);
     void ComputeIntegral();
+    double ComputeLocalIntegral(int xbin, int Irange=10 );
     void FindMaxAmp();
     //const std::vector<int>& getChannels() const;
 

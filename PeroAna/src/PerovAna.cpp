@@ -5,6 +5,7 @@
 #include <iostream>
 #include "TApplication.h"
 #include <TSpectrum.h>
+#include <TPolyMarker.h>
 
 #include "Event.h"
 
@@ -132,8 +133,9 @@ int main(int argc, char *argv[]){
     std::cout << "entries " << nEntries << std::endl;
 
     
-    //for (Long64_t ievt = 0; ievt < 500; ievt++) {
+    //for (Long64_t ievt = 0; ievt < 50; ievt++) {
     for (Long64_t ievt = 0; ievt < nEntries-1; ievt++) {
+        //std::cout << "====== EVENT " << ievt+1 << "======" << std::endl;
 
         if ((ievt+1)%100 == 0) 
             std::cout << "====== EVENT " << ievt+1 << "======" << std::endl;
@@ -173,23 +175,22 @@ int main(int argc, char *argv[]){
 
             //ToDO: if it is possible to use TSpectrum over the array of values and not the histo 
             //then remove all this histo part to the displaywave block
-
-            
             h_AvgMeanwaveform->SetLineColor(1);
             h_AvgMeanwaveform->SetLineWidth(3);
             
 
             for(int isample=0; isample<1024; isample++){
                 if (isample>10) {
-                h_waveform->SetBinContent(isample,myevent.GetRawWaveform()->at(isample)); //raw waveform
-                h_AvgMeanwaveform->SetBinContent(isample,myevent.GetAvgMeanWaveform()->at(isample)); //averaged mean waveform
+                    h_waveform->SetBinContent(isample,myevent.GetRawWaveform()->at(isample)); //raw waveform
+                    h_AvgMeanwaveform->SetBinContent(isample,myevent.GetAvgMeanWaveform()->at(isample)); //averaged mean waveform
                 }
                 else  {
-                h_waveform->SetBinContent(isample,0); // prevent first bins with strange values to be shown.
-                h_AvgMeanwaveform->SetBinContent(isample,0);
-                //if(w<10) cout << w << ", " << kv.second->Waveform[w] << endl;
+                    h_waveform->SetBinContent(isample,0); // prevent first bins with strange values to be shown.
+                    h_AvgMeanwaveform->SetBinContent(isample,0);
+              
                 }
             }
+
 
             //search for peaks in the waveform 
             Int_t np=20;
@@ -200,7 +201,7 @@ int main(int argc, char *argv[]){
             // Use TSpectrum to find the peak candidates
             TSpectrum *s = new TSpectrum(2*npeaks);
             
-            Int_t nfound = s->Search(h_AvgMeanwaveform, 20, " ", 0.1);
+            Int_t nfound = s->Search(h_AvgMeanwaveform, 20, "goff", 0.1);
             if (verbose) printf("Found %d candidate peaks to fit\n",nfound);
 
             Double_t *xpeaks;
@@ -208,6 +209,7 @@ int main(int argc, char *argv[]){
 
             for (Int_t p=0;p<nfound;p++) {
                 Double_t xp = xpeaks[p];
+                if (verbose) std::cout << "p  " << p << " : xp " << xp << std::endl;     
 
                 Int_t bin = h_AvgMeanwaveform->GetXaxis()->FindBin(xp);
                 Double_t yp = h_AvgMeanwaveform->GetBinContent(bin);
@@ -217,29 +219,34 @@ int main(int argc, char *argv[]){
                     if (verbose) std::cout << " found a good peak  x: " << xp << " ; y: " << yp << std::endl;
 
                     // compute integral around the peak
+                    double localI=0;
+                    /*
                     Int_t startI;
                     Int_t stopI;
-                    double localI=0;
+                   
                     Int_t Irange =10; 
 
-                    if ((xp- Irange/2) > 0)
-                        startI = xp-Irange/2;
+                    if ((bin- Irange/2) > 0)
+                        startI = bin-Irange/2;
                     else
                         startI = 0;
 
-                    if ((xp+Irange/2) < myevent.avgWaveform->size())
-                        stopI = xp+Irange/2;
+                    if ((bin+Irange/2) < myevent.avgWaveform->size())
+                        stopI = bin+Irange/2;
                     else
                         stopI = myevent.avgWaveform->size();
 
+                    if (verbose) std::cout << " xp  " << xp << " bin " << bin << " startI " << startI << "  stopI " << stopI <<std::endl;
                     for (int isample = startI; isample<stopI; isample++){
                         localI += myevent.avgWaveform->at(isample);
-                    } 
+                    } */
+                    localI = myevent.ComputeLocalIntegral(bin, 10 );
                     h_peakInt->Fill(localI);
                 }
             }
 
-            if (verbose) std::cout << "found " << ngoodpeaks << " good peaks (i.e. x5*baseline)" << std::endl;
+            if (verbose) 
+            std::cout << "found " << ngoodpeaks << " good peaks (i.e. x5*baseline)" << std::endl;
 
             // routine to display the waveforms one by one and monitor the peak searches
             if (displaywave){
@@ -265,25 +272,46 @@ int main(int argc, char *argv[]){
                 
                 TCanvas* c = new TCanvas("c", "c", 1000, 700);
                 c->cd();
-                //h_waveform->Draw("HIST");
+                
                 
                 h_AvgMeanwaveform->Draw("HIST");
                 h_AvgMeanwaveform->GetYaxis()->SetRangeUser(-0.002,0.03);
 
-                //search for peaks in the waveform 
-                //Int_t np=20;
-                //Int_t npeaks = TMath::Abs(np);
-
-                // Use TSpectrum to find the peak candidates
-                //TSpectrum *s = new TSpectrum(2*npeaks);
                 
-                //Int_t nfound = s->Search(h_AvgMeanwaveform, 20, " ", 0.1);
-                //if (verbose) printf("Found %d candidate peaks to fit\n",nfound);
 
-                //TH1 *hb = s->Background(h_AvgMeanwaveform,20,"same");
+                
+                
+                // to draw the markers for the found peaks 
+                Double_t xp[100]; //= new Double_t[100];
+                Double_t yp[100];// = new Double_t[100]; 
+
+                for (int ip=0; ip<nfound;ip++) {
+                    xp[ip] = xpeaks[ip];
+                    Int_t bin = h_AvgMeanwaveform->GetXaxis()->FindBin(xp[ip]);
+                    yp[ip] = h_AvgMeanwaveform->GetBinContent(bin);
+                }
+
+                TPolyMarker *pm = (TPolyMarker*) h_AvgMeanwaveform->GetListOfFunctions()->FindObject("TPolyMarker");
+                if (pm){
+                    h_AvgMeanwaveform->GetListOfFunctions()->Remove(pm);
+                    delete pm;
+                    }
+
+                pm = new TPolyMarker(npeaks, xp, yp);
+                
+                h_AvgMeanwaveform->GetListOfFunctions()->Add(pm);
+                pm->SetMarkerStyle(23);
+                pm->SetMarkerColor(kRed);
+                pm->SetMarkerSize(1.3);
+                h_AvgMeanwaveform->Draw("");
+
+                
+                
+                
                 h_waveform->Draw("HISTsame");
                 
                 // this is to estimate the background but I don't think it's needed here. 
+                //TH1 *hb = s->Background(h_AvgMeanwaveform,20,"same");
                 //if (hb) c->Update();    
                 //TCanvas* c = new TCanvas("c", "c", 1000, 700);
                 //c->cd();
@@ -291,8 +319,9 @@ int main(int argc, char *argv[]){
                 c->Update();
                 c->WaitPrimitive();
 
-                delete h_waveform; 
-                delete h_AvgMeanwaveform; 
+                //delete h_waveform; 
+                //delete h_AvgMeanwaveform; 
+                
                 delete c;
                 
             }
