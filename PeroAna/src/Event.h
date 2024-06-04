@@ -27,7 +27,7 @@ public:
     const std::vector<double>* GetWaveform() const; 
     const std::vector<double>* GetRawWaveform() const; 
     const std::vector<double>* GetAvgMeanWaveform() const; 
-    void ComputeMovingAverage(int step=5);
+    void ComputeMovingAverage(int step=5, bool debug=false);
     void ComputeBaseline(bool _removenoise);
     void SubtractBaseline(bool _removenoise);
     void ComputeIntegral();

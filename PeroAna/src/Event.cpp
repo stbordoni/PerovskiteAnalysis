@@ -55,8 +55,8 @@ const std::vector<double>* Event::GetWaveform() const {
      return Waveform;
 }
 
-void Event::ComputeMovingAverage(int step){
-    std::cout << "entering the Compute Moving Average" <<std::endl;
+void Event::ComputeMovingAverage(int step, bool debug){
+    if (debug) std::cout << "entering the Compute Moving Average" <<std::endl;
 
     avgWaveform = new std::vector<double>(*rawWaveform); // create a new WF to recorde the one after moving average
 
@@ -66,21 +66,21 @@ void Event::ComputeMovingAverage(int step){
 
     for (int isample=0; isample < end; isample++){
     
-        std::cout << "--- isample " << isample << std::endl;
+        if (debug) std::cout << "--- isample " << isample << std::endl;
         if ( ((isample - step/2) <0) || ( (isample + step/2) >end )) {
             continue;
         }
         else{
-            std::cout << "start:  isample-step/2 : " <<  isample-step/2 <<  " stop : isample+step/2 : " << isample+step/2 << std::endl;
+            if (debug) std::cout << "start:  isample-step/2 : " <<  isample-step/2 <<  " stop : isample+step/2 : " << isample+step/2 << std::endl;
             sum = 0;
             
             for(int isum =isample-step/2; isum<isample+step/2; isum++){ 
-                std::cout << "isum " << isum << std::endl;
+                if (debug) std::cout << "isum " << isum << std::endl;
                 sum += rawWaveform->at(isum);
-                std::cout << "sum " << sum << std::endl;
+                if (debug) std::cout << "sum " << sum << std::endl;
             }
             avgWaveform->at(isample) = (float)sum/step;
-            std::cout << " isample  " << isample << " rawWaveform->at(isample)  " << rawWaveform->at(isample)  <<  ";  avgWaveform  " << avgWaveform->at(isample)<<std::endl;
+            if (debug) std::cout << " isample  " << isample << " rawWaveform->at(isample)  " << rawWaveform->at(isample)  <<  ";  avgWaveform  " << avgWaveform->at(isample)<<std::endl;
         
         }
 

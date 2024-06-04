@@ -4,6 +4,7 @@
 #include <TH1.h>
 #include <iostream>
 #include "TApplication.h"
+#include <TSpectrum.h>
 
 #include "Event.h"
 
@@ -55,18 +56,24 @@ int main(int argc, char *argv[]){
     std::cout << "Drawing waveforms " << displaywave << std::endl;
 
     bool remove_noise = true;
+    bool verbose = false; // to have more printout in the various steps of the analysis
+
     if (remove_noise)
        std::cout << " Remove noise routine  applied : moving average " << std::endl;
     else
         std::cout << " Using raw waveforms" << std::endl;
+    
+    if (displaywave)
+        std::cout << "display waveform is active. Waveform will be displayed one by one  " << displaywave << std::endl;
+    
+
+    
+    
     //////////////////////////////////////////////////////////////
     // ROOT app and objects to read the data in the Run
     auto *app = new TApplication("myapp", &argc, argv);
-    //auto *app = new TApplication();
-
-
-    std::cout << "display wave " << displaywave << std::endl;
-
+    
+    
     // Open the ROOT file
     TFile *file = new TFile(filename, "READ");
     
@@ -137,11 +144,9 @@ int main(int argc, char *argv[]){
 
         } 
         else{
-        //std::cout << " evt  " << myevent.GetEventId() << "  ch " <<  myevent.GetChannelId() << " size  "<< myevent.GetRawWaveform()->size()<< std::endl;
         
-            std::cout << "Removing noise applying a moving average with step @ 10" << std::endl;
-
-            myevent.ComputeMovingAverage(10);
+            
+            myevent.ComputeMovingAverage(10, verbose);
             myevent.ComputeBaseline(remove_noise);
             myevent.SubtractBaseline(remove_noise);
 
@@ -153,6 +158,7 @@ int main(int argc, char *argv[]){
             //    std::cout << myevent.GetRawWaveform()->at(isample) << " " ;
             //std::cout << "\n " << std::endl;
 
+        
 
             //std::cout << "integral " << myevent.integral << " maxAmp  " << myevent.maxAmp << std::endl; 
             h_baseline->Fill(myevent.baseline);
@@ -163,7 +169,7 @@ int main(int argc, char *argv[]){
                 std::cout << "--- CH " << myevent.GetChannelId() << " ---" << std::endl;
                 TH1F* h_waveform = new TH1F("h_waveform","", 1024,0,1023);
                 TH1F* h_AvgMeanwaveform = new TH1F("h_AvgMeanwaveform","", 1024,0,1023);
-                h_AvgMeanwaveform->SetLineColor(2);
+                h_AvgMeanwaveform->SetLineColor(1);
                 h_AvgMeanwaveform->SetLineWidth(3);
                 
 
@@ -182,8 +188,27 @@ int main(int argc, char *argv[]){
                 TCanvas* c = new TCanvas("c", "c", 1000, 700);
                 c->cd();
                 h_waveform->Draw("HIST");
+                h_waveform->GetYaxis()->SetRangeUser(0,0.1);
                 h_AvgMeanwaveform->Draw("HISTsame");
-                    //h_waveform->GetXaxis()->SetRangeUser(0,200);
+
+                //search for peaks in the waveform 
+                Int_t np=20;
+                Int_t npeaks = TMath::Abs(np);
+
+                // Use TSpectrum to find the peak candidates
+                TSpectrum *s = new TSpectrum(2*npeaks);
+                
+                Int_t nfound = s->Search(h_AvgMeanwaveform, 20, " ", 0.1);
+                printf("Found %d candidate peaks to fit\n",nfound);
+
+                //TH1 *hb = s->Background(h_AvgMeanwaveform,20,"same");
+                h_waveform->Draw("HISTsame");
+                
+                // this is to estimate the background but I don't think it's needed here. 
+                //if (hb) c->Update();    
+                //TCanvas* c = new TCanvas("c", "c", 1000, 700);
+                //c->cd();
+                
                 c->Update();
                 c->WaitPrimitive();
 
