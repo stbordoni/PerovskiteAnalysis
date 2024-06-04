@@ -142,7 +142,7 @@ int main(int argc, char *argv[]){
         
         eventTree->GetEntry(ievt);
         
-        //if (ievt ==0)
+        
         Event myevent(eventData.event, eventData.channelId, *eventData.dataSamples);
         
         if (myevent.GetRawWaveform()->size()<1024){
@@ -166,8 +166,7 @@ int main(int argc, char *argv[]){
                 std::cout << "\n " << std::endl;
             }
         
-
-            //std::cout << "integral " << myevent.integral << " maxAmp  " << myevent.maxAmp << std::endl; 
+            
             h_baseline->Fill(myevent.baseline);
             h_maxAmp->Fill(myevent.maxAmp);
             h_integral->Fill(myevent.integral);
@@ -220,26 +219,7 @@ int main(int argc, char *argv[]){
 
                     // compute integral around the peak
                     double localI=0;
-                    /*
-                    Int_t startI;
-                    Int_t stopI;
-                   
-                    Int_t Irange =10; 
-
-                    if ((bin- Irange/2) > 0)
-                        startI = bin-Irange/2;
-                    else
-                        startI = 0;
-
-                    if ((bin+Irange/2) < myevent.avgWaveform->size())
-                        stopI = bin+Irange/2;
-                    else
-                        stopI = myevent.avgWaveform->size();
-
-                    if (verbose) std::cout << " xp  " << xp << " bin " << bin << " startI " << startI << "  stopI " << stopI <<std::endl;
-                    for (int isample = startI; isample<stopI; isample++){
-                        localI += myevent.avgWaveform->at(isample);
-                    } */
+                    
                     localI = myevent.ComputeLocalIntegral(bin, 10 );
                     h_peakInt->Fill(localI);
                 }
@@ -250,7 +230,7 @@ int main(int argc, char *argv[]){
 
             // routine to display the waveforms one by one and monitor the peak searches
             if (displaywave){
-                //std::cout << "--- CH " << myevent.GetChannelId() << " ---" << std::endl;
+                
                 /*
                 TH1F* h_waveform = new TH1F("h_waveform","", 1024,0,1023);
                 TH1F* h_AvgMeanwaveform = new TH1F("h_AvgMeanwaveform","", 1024,0,1023);
