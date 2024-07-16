@@ -40,6 +40,9 @@ public:
     double integral;
     double maxAmp;
     double ToT; 
+    std::vector<double> x_peak;
+    std::vector<double> y_peak;
+
     std::vector<double>* Waveform;
     std::vector<double>* avgWaveform;
 

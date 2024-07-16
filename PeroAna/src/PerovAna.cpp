@@ -56,10 +56,10 @@ int main(int argc, char *argv[]){
     std::cout << "Running analysis on file " << filename <<std::endl;
     std::cout << "Drawing waveforms " << displaywave << std::endl;
 
-    bool remove_noise = true;
+    bool mitigate_noise = true;
     bool verbose = false; // to have more printout in the various steps of the analysis
 
-    if (remove_noise)
+    if (mitigate_noise)
        std::cout << " Remove noise routine  applied : moving average " << std::endl;
     else
         std::cout << " Using raw waveforms" << std::endl;
@@ -124,7 +124,9 @@ int main(int argc, char *argv[]){
     TH1F* h_maxAmp   = new TH1F("h_maxAmp","", 250, 10, 10);
     TH1F* h_integral = new TH1F("h_integral","", 100, 10,10);
     TH1F* h_peakInt  = new TH1F("h_peakInt", "", 100, 10,10);
-    
+    TH1F *h_goodpeaksperevt = new TH1F("h_goodpeaksperevt", "", 15, -0.5, 14.5);    
+
+
     TH1F* h_waveform = new TH1F("h_waveform","", 1024,0,1023);
     TH1F* h_AvgMeanwaveform = new TH1F("h_AvgMeanwaveform","", 1024,0,1023);
 
@@ -142,7 +144,7 @@ int main(int argc, char *argv[]){
         
         eventTree->GetEntry(ievt);
         
-        
+
         Event myevent(eventData.event, eventData.channelId, *eventData.dataSamples);
         
         if (myevent.GetRawWaveform()->size()<1024){
@@ -152,9 +154,9 @@ int main(int argc, char *argv[]){
         else{
         
             
-            myevent.ComputeMovingAverage(10, verbose);
-            myevent.ComputeBaseline(remove_noise);
-            myevent.SubtractBaseline(remove_noise);
+            myevent.ComputeMovingAverage(50, verbose);
+            myevent.ComputeBaseline(mitigate_noise);
+            myevent.SubtractBaseline(mitigate_noise);
 
             myevent.ComputeIntegral();
             myevent.FindMaxAmp();
@@ -214,7 +216,10 @@ int main(int argc, char *argv[]){
                 Double_t yp = h_AvgMeanwaveform->GetBinContent(bin);
 
                 if (yp > 5*myevent.baseline) {
+                    //couont and record the information about the good peaks    
                     ngoodpeaks++;
+                    myevent.x_peak.push_back(xp);
+                    myevent.y_peak.push_back(yp);
                     if (verbose) std::cout << " found a good peak  x: " << xp << " ; y: " << yp << std::endl;
 
                     // compute integral around the peak
@@ -227,6 +232,8 @@ int main(int argc, char *argv[]){
 
             if (verbose) 
             std::cout << "found " << ngoodpeaks << " good peaks (i.e. x5*baseline)" << std::endl;
+
+            h_goodpeaksperevt->Fill(ngoodpeaks);
 
             // routine to display the waveforms one by one and monitor the peak searches
             if (displaywave){
@@ -255,7 +262,7 @@ int main(int argc, char *argv[]){
                 
                 
                 h_AvgMeanwaveform->Draw("HIST");
-                h_AvgMeanwaveform->GetYaxis()->SetRangeUser(-0.002,0.03);
+                //h_AvgMeanwaveform->GetYaxis()->SetRangeUser(-0.002,0.03);
 
                 
 
@@ -321,6 +328,8 @@ int main(int argc, char *argv[]){
     h_integral->Draw();
     c1->cd(4);
     h_peakInt->Draw();
+    c1->cd(5);
+    h_goodpeaksperevt->Draw();
 
     // Close the file
     //file->Close();

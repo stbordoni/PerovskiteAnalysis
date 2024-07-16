@@ -7,7 +7,8 @@ if [ "$#" -ne 1 ]; then
 fi
 
 # Set the input directory and output directory
-input_dir="/Users/bordonis/ResearchActivities/Perovskite/data/PCB_box/CERNdata"
+input_dir="/Users/bordonis/ResearchActivities/Perovskite/data/PCB_box/UniGe"
+#input_dir="/Users/bordonis/ResearchActivities/Perovskite/data/"
 rootfile_dir="/Users/bordonis/ResearchActivities/PerovskiteAnalysis/PeroAna/rootinputfiles"
 
 # Get the input file name from the command line argument
@@ -67,7 +68,7 @@ if [ $? -eq 0 ]; then
     display_waveforms=true
 
     # Run the analysis
-    echo $display_waveforms
+    #echo $display_waveforms
 
     ./PerovAna $rootfile_path $display_waveforms
     #./PerovAna
