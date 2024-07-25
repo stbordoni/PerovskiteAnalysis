@@ -6,6 +6,7 @@
 #include "TApplication.h"
 #include <TSpectrum.h>
 #include <TPolyMarker.h>
+#include "TVirtualFFT.h"
 
 #include "Event.h"
 
@@ -75,6 +76,8 @@ int main(int argc, char *argv[]){
     auto *app = new TApplication("myapp", &argc, argv);
     
     
+    Int_t nSamples = 1024;
+
     // Open the ROOT file
     TFile *file = new TFile(filename, "READ");
     
@@ -127,8 +130,20 @@ int main(int argc, char *argv[]){
     TH1F *h_goodpeaksperevt = new TH1F("h_goodpeaksperevt", "", 15, -0.5, 14.5);    
 
 
-    TH1F* h_waveform = new TH1F("h_waveform","", 1024,0,1023);
-    TH1F* h_AvgMeanwaveform = new TH1F("h_AvgMeanwaveform","", 1024,0,1023);
+    TH1F* h_waveform = new TH1F("h_waveform","", nSamples,0,1023);
+    TH1F* h_waveforminTime = new TH1F("h_waveforminTime","", nSamples,0*0.3125,1023*0.3125);
+    TH1F* h_AvgMeanwaveform = new TH1F("h_AvgMeanwaveform","", nSamples,0,1023);
+
+    std::cout << "  here " << std::endl;
+     // initiate the FFT
+    TVirtualFFT::SetTransform(0);
+
+    // get the magnitude (i.e., power) of the transform of f(x)
+    TH1* h_1dMagRaw = NULL;
+    TH1* h_noisefreq =NULL;
+    //hnoisefreq->SetName("hnoisefreq");
+
+    
 
     // Loop over entries in the event tree
     Long64_t nEntries = eventTree->GetEntries();
@@ -143,11 +158,13 @@ int main(int argc, char *argv[]){
             std::cout << "====== EVENT " << ievt+1 << "======" << std::endl;
         
         eventTree->GetEntry(ievt);
+        if (ievt>0)
+            h_1dMagRaw->Clear();
         
 
         Event myevent(eventData.event, eventData.channelId, *eventData.dataSamples);
         
-        if (myevent.GetRawWaveform()->size()<1024){
+        if (myevent.GetRawWaveform()->size()<nSamples){
             std::cout << "Error on Event " <<  myevent.GetEventId() << ": waveform corrupted (<1024 samples) --> "<< myevent.GetRawWaveform()->size()  << std::endl;
             continue;
         } 
@@ -173,6 +190,9 @@ int main(int argc, char *argv[]){
             h_maxAmp->Fill(myevent.maxAmp);
             h_integral->Fill(myevent.integral);
 
+            
+	  
+
 
             //ToDO: if it is possible to use TSpectrum over the array of values and not the histo 
             //then remove all this histo part to the displaywave block
@@ -180,17 +200,23 @@ int main(int argc, char *argv[]){
             h_AvgMeanwaveform->SetLineWidth(3);
             
 
-            for(int isample=0; isample<1024; isample++){
+            for(int isample=0; isample<nSamples; isample++){
                 if (isample>10) {
                     h_waveform->SetBinContent(isample,myevent.GetRawWaveform()->at(isample)); //raw waveform
+                    h_waveforminTime->SetBinContent(isample,myevent.GetRawWaveform()->at(isample));
                     h_AvgMeanwaveform->SetBinContent(isample,myevent.GetAvgMeanWaveform()->at(isample)); //averaged mean waveform
                 }
                 else  {
                     h_waveform->SetBinContent(isample,0); // prevent first bins with strange values to be shown.
+                    h_waveforminTime->SetBinContent(isample*0.3125,0);
                     h_AvgMeanwaveform->SetBinContent(isample,0);
               
                 }
             }
+
+
+            
+	
 
 
             //search for peaks in the waveform 
@@ -235,30 +261,38 @@ int main(int argc, char *argv[]){
 
             h_goodpeaksperevt->Fill(ngoodpeaks);
 
+            
+            //noise study
+           
+            h_1dMagRaw = h_waveforminTime->FFT(h_1dMagRaw, "MAG"); // this has units of 1/f_max
+            Int_t nbinsx = h_1dMagRaw->GetNbinsX();
+            Double_t x_low =0;
+            Double_t x_up = h_1dMagRaw->GetXaxis()->GetXmax()/h_waveforminTime->GetXaxis()->GetXmax();
+            
+            
+            TH1D * h_1dMag= new TH1D( "h_1dMag", "Magnitude", nbinsx, x_low, x_up);
+            
+            // rescale axis to get real units
+            for (Int_t bin = 1; bin <= nSamples; bin++){
+                h_1dMag->SetBinContent(bin, h_1dMagRaw->GetBinContent(bin)/sqrt(h_1dMagRaw->GetBinContent(bin)));
+            }
+            
+            if (ievt==0){
+                h_noisefreq = (TH1D*)h_1dMag->Clone("h_noisefreq");
+            }
+            else
+                h_noisefreq->Add(h_1dMag);
+
+            delete h_1dMag; 
+            
+
             // routine to display the waveforms one by one and monitor the peak searches
             if (displaywave){
                 
-                /*
-                TH1F* h_waveform = new TH1F("h_waveform","", 1024,0,1023);
-                TH1F* h_AvgMeanwaveform = new TH1F("h_AvgMeanwaveform","", 1024,0,1023);
-                h_AvgMeanwaveform->SetLineColor(1);
-                h_AvgMeanwaveform->SetLineWidth(3);
-                
-
-                for(int isample=0; isample<1024; isample++){
-                    if (isample>10) {
-                    h_waveform->SetBinContent(isample,myevent.GetRawWaveform()->at(isample)); //raw waveform
-                    h_AvgMeanwaveform->SetBinContent(isample,myevent.GetAvgMeanWaveform()->at(isample)); //averaged mean waveform
-                    }
-                    else  {
-                    h_waveform->SetBinContent(isample,0); // prevent first bins with strange values to be shown.
-                    h_AvgMeanwaveform->SetBinContent(isample,0);
-                    //if(w<10) cout << w << ", " << kv.second->Waveform[w] << endl;
-                    }
-                }*/
                 
                 TCanvas* c = new TCanvas("c", "c", 1000, 700);
-                c->cd();
+                //c->Divide(2,1);
+                c->cd(1);
                 
                 
                 h_AvgMeanwaveform->Draw("HIST");
@@ -303,14 +337,19 @@ int main(int argc, char *argv[]){
                 //TCanvas* c = new TCanvas("c", "c", 1000, 700);
                 //c->cd();
                 
-                c->Update();
-                c->WaitPrimitive();
+                
 
                 //delete h_waveform; 
                 //delete h_AvgMeanwaveform; 
+
                 
+
+                c->Update();
+                c->WaitPrimitive();
+
                 delete c;
-                
+                //delete h_1dMagRaw; 
+                 
             }
         }   
 
@@ -331,6 +370,9 @@ int main(int argc, char *argv[]){
     c1->cd(5);
     h_goodpeaksperevt->Draw();
 
+    TCanvas* c2 = new TCanvas("c2", "c2", 1000, 700);
+    c2->cd();
+    h_noisefreq->Draw();
     // Close the file
     //file->Close();
     
