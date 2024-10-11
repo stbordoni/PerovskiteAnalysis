@@ -7,8 +7,11 @@ if [ "$#" -ne 1 ]; then
 fi
 
 # Set the input directory and output directory
-input_dir="/Users/bordonis/ResearchActivities/Perovskite/data/PCB_box/UniGe"
+#input_dir is the path where the raw data file (from the DAQ) are stored
+input_dir="/Users/bordonis/ResearchActivities/Perovskite/data/NewSiPM_KEPboard_DPNCboard/" 
 #input_dir="/Users/bordonis/ResearchActivities/Perovskite/data/"
+
+#rootfile_dir is the location where the rootfile built by the readData code is saved 
 rootfile_dir="/Users/bordonis/ResearchActivities/PerovskiteAnalysis/PeroAna/rootinputfiles"
 
 # Get the input file name from the command line argument
@@ -66,6 +69,7 @@ if [ $? -eq 0 ]; then
     
     #here are analysis options
     display_waveforms=true
+
 
     # Run the analysis
     #echo $display_waveforms

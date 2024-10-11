@@ -2,11 +2,17 @@
 #include <TTree.h>
 #include <TCanvas.h>
 #include <TH1.h>
+#include <TH2.h>
+#include <TMath.h>
+
 #include <iostream>
 #include "TApplication.h"
 #include <TSpectrum.h>
 #include <TPolyMarker.h>
 #include "TVirtualFFT.h"
+
+#include <filesystem>
+#include <string>
 
 #include "Event.h"
 
@@ -47,7 +53,8 @@ int main(int argc, char *argv[]){
     for (int iarg=0; iarg <argc; iarg++)
         std::cout << "argv["  << iarg << "]" <<argv[iarg] << std::endl; 
 
-    char* filename=argv[1];
+    //char* filename=argv[1];
+    std::string filename=argv[1];
     bool displaywave;
     if (std::string(argv[2])=="true")
         displaywave=true;
@@ -78,8 +85,52 @@ int main(int argc, char *argv[]){
     
     Int_t nSamples = 1024;
 
+    TFile* FileOutput   ; 
+    std::string outputana_filename;
+    //create the filename of the output file from the current input filename. Just replacing _output.root to _ana.root 
+    std::size_t found = filename.find("_output.root");
+    if (found != std::string::npos) {
+        // Create the new filename by replacing "_output.root" with "_ana.root"
+        outputana_filename = filename.substr(0, found) + "_ana.root";
+
+        // Rename the file
+        //fs::rename(entry.path(), entry.path().parent_path() / outputana_filename);
+
+        std::cout << "Renamed: " << filename << " to " << outputana_filename << std::endl;
+    }
+
+    //FileOutput = new TFile(fileOut.Data(),"RECREATE");
+    FileOutput = new TFile(outputana_filename.c_str(),"RECREATE");
+    if(!FileOutput) {std::cout << "no output file! exit." << std::endl; exit(1);}
+    //dataOut    = new TTree("Events","Events");
+    //storing variables in another tree
+    
+    TTree *output_tree; 
+    //storing variables in another tree
+    output_tree = new TTree("output_tree", "Tree contanining all pre-computed quatitities");
+
+    
+
+    double baseline;
+    double pulseInt;
+    int npeaks;
+    std::vector<double> peakInt;
+    std::vector<double> peakAmp;
+
+    output_tree->Branch("baseline", &baseline);
+    output_tree->Branch("pulseInt", &pulseInt);   
+    output_tree->Branch("npeaks", &npeaks);   
+     
+    output_tree->Branch("peakInt", &peakInt);
+    output_tree->Branch("peakAmp", &peakAmp);
+    
+    //output_tree->Branch("ToT", &ToT);
+   
+
+    
+
     // Open the ROOT file
-    TFile *file = new TFile(filename, "READ");
+    TFile *file = new TFile(filename.c_str(), "READ");
     
     if (!file || file->IsZombie()) {
         std::cerr << "Error: Unable to open file " << filename << std::endl;
@@ -134,7 +185,11 @@ int main(int argc, char *argv[]){
     TH1F* h_waveforminTime = new TH1F("h_waveforminTime","", nSamples,0*0.3125,1023*0.3125);
     TH1F* h_AvgMeanwaveform = new TH1F("h_AvgMeanwaveform","", nSamples,0,1023);
 
-    std::cout << "  here " << std::endl;
+    TH1F* h_peakAmp   = new TH1F("h_peakAmp","", 250, 10, 10);
+    TH2F* h_peakAmp_vs_peakI = new TH2F("h_peakAmp_vs_peakI","" ,250, 10, 10, 100, 10,10);
+
+    TH1F *h_count_pe_entries = new TH1F("h_count_pe_entries", "counting p.e. entries", 5, -0.5, 4.5); 
+    
      // initiate the FFT
     TVirtualFFT::SetTransform(0);
 
@@ -143,7 +198,7 @@ int main(int argc, char *argv[]){
     TH1* h_noisefreq =NULL;
     //hnoisefreq->SetName("hnoisefreq");
 
-    
+    TH1* h_noisedB =NULL;
 
     // Loop over entries in the event tree
     Long64_t nEntries = eventTree->GetEntries();
@@ -171,7 +226,7 @@ int main(int argc, char *argv[]){
         else{
         
             
-            myevent.ComputeMovingAverage(50, verbose);
+            myevent.ComputeMovingAverage(20, verbose);
             myevent.ComputeBaseline(mitigate_noise);
             myevent.SubtractBaseline(mitigate_noise);
 
@@ -179,11 +234,11 @@ int main(int argc, char *argv[]){
             myevent.FindMaxAmp();
 
             // to printout the waveform
-            if (verbose){
-                for (int isample =0; isample<myevent.GetRawWaveform()->size(); isample++ )
-                    std::cout << myevent.GetRawWaveform()->at(isample) << " " ;
-                std::cout << "\n " << std::endl;
-            }
+            //if (verbose){
+            //    for (int isample =0; isample<myevent.GetRawWaveform()->size(); isample++ )
+            //        std::cout << myevent.GetRawWaveform()->at(isample) << " " ;
+            //    std::cout << "\n " << std::endl;
+            //}
         
             
             h_baseline->Fill(myevent.baseline);
@@ -191,7 +246,7 @@ int main(int argc, char *argv[]){
             h_integral->Fill(myevent.integral);
 
             
-	  
+            
 
 
             //ToDO: if it is possible to use TSpectrum over the array of values and not the histo 
@@ -223,7 +278,8 @@ int main(int argc, char *argv[]){
             Int_t np=20;
             Int_t npeaks = TMath::Abs(np);
 
-            Int_t ngoodpeaks =0;
+            //Int_t ngoodpeaks =0;
+            myevent.ngoodpeaks =0;
 
             // Use TSpectrum to find the peak candidates
             TSpectrum *s = new TSpectrum(2*npeaks);
@@ -243,7 +299,7 @@ int main(int argc, char *argv[]){
 
                 if (yp > 5*myevent.baseline) {
                     //couont and record the information about the good peaks    
-                    ngoodpeaks++;
+                    myevent.ngoodpeaks++;
                     myevent.x_peak.push_back(xp);
                     myevent.y_peak.push_back(yp);
                     if (verbose) std::cout << " found a good peak  x: " << xp << " ; y: " << yp << std::endl;
@@ -253,18 +309,30 @@ int main(int argc, char *argv[]){
                     
                     localI = myevent.ComputeLocalIntegral(bin, 10 );
                     h_peakInt->Fill(localI);
+                    h_peakAmp->Fill(yp);
+                    h_peakAmp_vs_peakI->Fill(yp, localI); 
+
+                    //to count entries in each pe peak 
+                    if ( (yp > 0.0017) && (yp < 0.0035) )
+                        h_count_pe_entries->Fill(1.);
+                    else if  ( (yp > 0.0043) && (yp < 0.0055) )
+                        h_count_pe_entries->Fill(2.);
+                    else if ( (yp > 0.0065) &&  (yp < 0.0080) )
+                        h_count_pe_entries->Fill(3.);
                 }
             }
 
             if (verbose) 
-            std::cout << "found " << ngoodpeaks << " good peaks (i.e. x5*baseline)" << std::endl;
+            std::cout << "found " << myevent.ngoodpeaks << " good peaks (i.e. x5*baseline) with baseline =" << myevent.baseline << std::endl;
+            
+            
 
-            h_goodpeaksperevt->Fill(ngoodpeaks);
+            h_goodpeaksperevt->Fill(myevent.ngoodpeaks);
 
             
             //noise study
            
-            h_1dMagRaw = h_waveforminTime->FFT(h_1dMagRaw, "MAG"); // this has units of 1/f_max
+            h_1dMagRaw = h_waveforminTime->FFT(h_1dMagRaw, "MAG R2C M"); // this has units of 1/f_max
             Int_t nbinsx = h_1dMagRaw->GetNbinsX();
             Double_t x_low =0;
             Double_t x_up = h_1dMagRaw->GetXaxis()->GetXmax()/h_waveforminTime->GetXaxis()->GetXmax();
@@ -284,41 +352,36 @@ int main(int argc, char *argv[]){
                 h_noisefreq->Add(h_1dMag);
 
             delete h_1dMag; 
-            
+
 
             // routine to display the waveforms one by one and monitor the peak searches
             if (displaywave){
                 
                 
                 TCanvas* c = new TCanvas("c", "c", 1000, 700);
-                //c->Divide(2,1);
                 c->cd(1);
-                
-                
+
                 h_AvgMeanwaveform->Draw("HIST");
-                //h_AvgMeanwaveform->GetYaxis()->SetRangeUser(-0.002,0.03);
-
-                
-
-                
-                
+            
                 // to draw the markers for the found peaks 
-                Double_t xp[100]; //= new Double_t[100];
-                Double_t yp[100];// = new Double_t[100]; 
+                Double_t *xp = new Double_t[50];
+                Double_t *yp = new Double_t[50]; 
 
-                for (int ip=0; ip<nfound;ip++) {
-                    xp[ip] = xpeaks[ip];
-                    Int_t bin = h_AvgMeanwaveform->GetXaxis()->FindBin(xp[ip]);
-                    yp[ip] = h_AvgMeanwaveform->GetBinContent(bin);
+            
+                //for (int ip=0; ip<nfound;ip++) {
+                for (int ip=0; ip<myevent.ngoodpeaks;ip++) {
+                    xp[ip] = myevent.x_peak[ip];
+                    yp[ip] = myevent.y_peak[ip];
+                    if (verbose) std::cout << " found a good peak  x: " << xp[ip] << " ; y: " << yp[ip] << std::endl;
                 }
 
                 TPolyMarker *pm = (TPolyMarker*) h_AvgMeanwaveform->GetListOfFunctions()->FindObject("TPolyMarker");
                 if (pm){
                     h_AvgMeanwaveform->GetListOfFunctions()->Remove(pm);
                     delete pm;
-                    }
+                }
 
-                pm = new TPolyMarker(npeaks, xp, yp);
+                pm = new TPolyMarker(myevent.ngoodpeaks, xp, yp);
                 
                 h_AvgMeanwaveform->GetListOfFunctions()->Add(pm);
                 pm->SetMarkerStyle(23);
@@ -326,36 +389,33 @@ int main(int argc, char *argv[]){
                 pm->SetMarkerSize(1.3);
                 h_AvgMeanwaveform->Draw("");
 
-                
-                
-                
                 h_waveform->Draw("HISTsame");
-                
-                // this is to estimate the background but I don't think it's needed here. 
-                //TH1 *hb = s->Background(h_AvgMeanwaveform,20,"same");
-                //if (hb) c->Update();    
-                //TCanvas* c = new TCanvas("c", "c", 1000, 700);
-                //c->cd();
-                
-                
-
-                //delete h_waveform; 
-                //delete h_AvgMeanwaveform; 
-
-                
+            
+                delete [] xp;
+                delete [] yp;
 
                 c->Update();
                 c->WaitPrimitive();
 
                 delete c;
-                //delete h_1dMagRaw; 
-                 
+                     
             }
         }   
+    
+    baseline=myevent.baseline;
+    pulseInt=myevent.integral;
+    npeaks=myevent.ngoodpeaks;
+    peakAmp=myevent.y_peak;
+    peakInt=myevent.peak_integral;
 
+    output_tree->Fill();
     }
 
 
+    std::cout << " pe entries : \n " ; 
+    std::cout << "1 p.e : " <<  h_count_pe_entries->GetBinContent(2) << "\n ";
+    std::cout << "2 p.e : " <<  h_count_pe_entries->GetBinContent(3) << "\n ";
+    std::cout << "3 p.e : " <<  h_count_pe_entries->GetBinContent(4) << "\n ";
     
     TCanvas* c1 = new TCanvas("c1", "c1", 1200, 1000);
     c1->Divide(3,2);   
@@ -363,29 +423,41 @@ int main(int argc, char *argv[]){
     h_baseline->Draw();
     c1->cd(2);
     h_maxAmp->Draw();
+    h_peakAmp->SetLineColor(2);
+    h_peakAmp->Draw("");   
+    h_maxAmp->Draw("SAME"); 
     c1->cd(3);
     h_integral->Draw();
     c1->cd(4);
     h_peakInt->Draw();
     c1->cd(5);
     h_goodpeaksperevt->Draw();
+    c1->cd(6);
+    h_peakAmp_vs_peakI->GetXaxis()->SetTitle("peak Amplitude [V]");
+    h_peakAmp_vs_peakI->GetYaxis()->SetTitle("peak Integral [V]");
+    h_peakAmp_vs_peakI->Draw("COLZ");
 
     TCanvas* c2 = new TCanvas("c2", "c2", 1000, 700);
     c2->cd();
+    h_noisefreq->GetYaxis()->SetRangeUser(1000,12000);
     h_noisefreq->Draw();
     // Close the file
     //file->Close();
     
+    TCanvas* c3 = new TCanvas("c3", "c3", 600, 700);
+    c3->cd();
+    h_count_pe_entries->Draw();
+    
+    
+    //before closing produce an output tree
+
+
+    FileOutput->cd();
+    output_tree->Write();
+    FileOutput->Close();
 
     app->Run();    
     return 0;
 }
 
-//int main() {
 
-//    bool displaywave = true;
-    // Replace "output.root" with the actual name of your output file
-//    analyzeData("/Users/bordonis/ResearchActivities/PerovskiteAnalysis/PeroAna/rootinputfiles/Run_BR300_Data_1_24_2024_Ascii_Am003_output.root", displaywave);
-    
-//    return 0;
-//}

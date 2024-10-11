@@ -56,7 +56,7 @@ const std::vector<double>* Event::GetWaveform() const {
 }
 
 void Event::ComputeMovingAverage(int step, bool debug){
-    if (debug) std::cout << "entering the Compute Moving Average" <<std::endl;
+   //if (debug) std::cout << "entering the Compute Moving Average" <<std::endl;
 
     avgWaveform = new std::vector<double>(*rawWaveform); // create a new WF to recorde the one after moving average
 
@@ -66,21 +66,21 @@ void Event::ComputeMovingAverage(int step, bool debug){
 
     for (int isample=0; isample < end; isample++){
     
-        if (debug) std::cout << "--- isample " << isample << std::endl;
+        //if (debug) std::cout << "--- isample " << isample << std::endl;
         if ( ((isample - step/2) <0) || ( (isample + step/2) >end )) {
             continue;
         }
         else{
-            if (debug) std::cout << "start:  isample-step/2 : " <<  isample-step/2 <<  " stop : isample+step/2 : " << isample+step/2 << std::endl;
+            //if (debug) std::cout << "start:  isample-step/2 : " <<  isample-step/2 <<  " stop : isample+step/2 : " << isample+step/2 << std::endl;
             sum = 0;
             
             for(int isum =isample-step/2; isum<isample+step/2; isum++){ 
-                if (debug) std::cout << "isum " << isum << std::endl;
+                //if (debug) std::cout << "isum " << isum << std::endl;
                 sum += rawWaveform->at(isum);
-                if (debug) std::cout << "sum " << sum << std::endl;
+                //if (debug) std::cout << "sum " << sum << std::endl;
             }
             avgWaveform->at(isample) = (float)sum/step;
-            if (debug) std::cout << " isample  " << isample << " rawWaveform->at(isample)  " << rawWaveform->at(isample)  <<  ";  avgWaveform  " << avgWaveform->at(isample)<<std::endl;
+            //if (debug) std::cout << " isample  " << isample << " rawWaveform->at(isample)  " << rawWaveform->at(isample)  <<  ";  avgWaveform  " << avgWaveform->at(isample)<<std::endl;
         
         }
 
@@ -153,6 +153,7 @@ double Event::ComputeLocalIntegral(int xbin, int Irange ){
         localI += avgWaveform->at(isample);
     } 
 
+    peak_integral.push_back(localI);
     return localI; 
 }
 

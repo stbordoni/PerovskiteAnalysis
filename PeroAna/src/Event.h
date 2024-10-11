@@ -42,6 +42,9 @@ public:
     double ToT; 
     std::vector<double> x_peak;
     std::vector<double> y_peak;
+    std::vector<double> peak_integral;
+
+    int ngoodpeaks;
 
     std::vector<double>* Waveform;
     std::vector<double>* avgWaveform;

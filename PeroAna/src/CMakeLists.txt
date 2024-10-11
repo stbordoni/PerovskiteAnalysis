@@ -11,4 +11,8 @@ if( WITH_ROOT )
     target_link_libraries(PerovAna Spectrum)
     install( TARGETS PerovAna DESTINATION bin )
 
+    cmessage( STATUS "Creating fft executable..." )
+    add_executable(fft ${CMAKE_CURRENT_SOURCE_DIR}/fft.cpp)
+    target_link_libraries(fft ${ROOT_LIBRARIES})
+    install( TARGETS fft DESTINATION bin )
 endif()
