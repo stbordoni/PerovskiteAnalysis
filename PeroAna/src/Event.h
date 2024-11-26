@@ -38,8 +38,11 @@ public:
 
     double baseline;
     double integral;
+    double tailIntegral;
     double maxAmp;
     double ToT; 
+    //int distmaxAmppeaks_right;
+    //int distmaxAmppeaks_left;
     std::vector<double> x_peak;
     std::vector<double> y_peak;
     std::vector<double> peak_integral;

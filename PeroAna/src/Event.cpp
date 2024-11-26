@@ -19,6 +19,8 @@ Event::~Event() {
 void Event::Init(){
 
     std::cout<< " Initialize event " << std::endl;
+    tailIntegral=0; 
+    ngoodpeaks=0;
     //setEventId();
     //channelId();
 }

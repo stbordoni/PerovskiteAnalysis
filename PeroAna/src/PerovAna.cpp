@@ -113,13 +113,19 @@ int main(int argc, char *argv[]){
 
     double baseline;
     double pulseInt;
+    double tailInt;
     int npeaks;
+    int distmaxAmppeaks_right;
+    int distmaxAmppeaks_left;
     std::vector<double> peakInt;
     std::vector<double> peakAmp;
 
     output_tree->Branch("baseline", &baseline);
     output_tree->Branch("pulseInt", &pulseInt);   
+    output_tree->Branch("tailInt", &tailInt);   
     output_tree->Branch("npeaks", &npeaks);   
+    output_tree->Branch("distmaxAmppeaks_right", &distmaxAmppeaks_right);  
+    output_tree->Branch("distmaxAmppeaks_left", &distmaxAmppeaks_left);   
      
     output_tree->Branch("peakInt", &peakInt);
     output_tree->Branch("peakAmp", &peakAmp);
@@ -178,17 +184,21 @@ int main(int argc, char *argv[]){
     TH1F* h_maxAmp   = new TH1F("h_maxAmp","", 250, 10, 10);
     TH1F* h_integral = new TH1F("h_integral","", 100, 10,10);
     TH1F* h_peakInt  = new TH1F("h_peakInt", "", 100, 10,10);
-    TH1F *h_goodpeaksperevt = new TH1F("h_goodpeaksperevt", "", 15, -0.5, 14.5);    
+    TH1F* h_tailInt  = new TH1F("h_tailInt", "", 100, 10,10);
+    TH1F* h_goodpeaksperevt = new TH1F("h_goodpeaksperevt", "", 15, -0.5, 14.5);    
+    TH1F* h_distancetomaxAmppeak_left = new TH1F("h_distancetomaxAmppeak_left", "", nSamples, -500, 524 );
+    TH1F* h_distancetomaxAmppeak_right = new TH1F("h_distancetomaxAmppeak_right","", nSamples, -500, 524 );
 
 
     TH1F* h_waveform = new TH1F("h_waveform","", nSamples,0,1023);
     TH1F* h_waveforminTime = new TH1F("h_waveforminTime","", nSamples,0*0.3125,1023*0.3125);
     TH1F* h_AvgMeanwaveform = new TH1F("h_AvgMeanwaveform","", nSamples,0,1023);
+    TH1F* h_tailIntegral = new TH1F("h_tailIntegral","", nSamples,0,1023);
 
     TH1F* h_peakAmp   = new TH1F("h_peakAmp","", 250, 10, 10);
     TH2F* h_peakAmp_vs_peakI = new TH2F("h_peakAmp_vs_peakI","" ,250, 10, 10, 100, 10,10);
 
-    TH1F *h_count_pe_entries = new TH1F("h_count_pe_entries", "counting p.e. entries", 5, -0.5, 4.5); 
+    TH1F *h_count_peaks_entries = new TH1F("h_count_peaks_entries", "counting peaks entries", 5, -0.5, 4.5); 
     
      // initiate the FFT
     TVirtualFFT::SetTransform(0);
@@ -297,7 +307,7 @@ int main(int argc, char *argv[]){
                 Int_t bin = h_AvgMeanwaveform->GetXaxis()->FindBin(xp);
                 Double_t yp = h_AvgMeanwaveform->GetBinContent(bin);
 
-                if (yp > 5*myevent.baseline) {
+                if (yp > 3*myevent.baseline) {
                     //couont and record the information about the good peaks    
                     myevent.ngoodpeaks++;
                     myevent.x_peak.push_back(xp);
@@ -312,20 +322,69 @@ int main(int argc, char *argv[]){
                     h_peakAmp->Fill(yp);
                     h_peakAmp_vs_peakI->Fill(yp, localI); 
 
+                    
+
+
                     //to count entries in each pe peak 
-                    if ( (yp > 0.0017) && (yp < 0.0035) )
+                    /*if ( (yp > 0.0017) && (yp < 0.0035) )
                         h_count_pe_entries->Fill(1.);
                     else if  ( (yp > 0.0043) && (yp < 0.0055) )
                         h_count_pe_entries->Fill(2.);
                     else if ( (yp > 0.0065) &&  (yp < 0.0080) )
                         h_count_pe_entries->Fill(3.);
+                        */
                 }
             }
 
             if (verbose) 
             std::cout << "found " << myevent.ngoodpeaks << " good peaks (i.e. x5*baseline) with baseline =" << myevent.baseline << std::endl;
             
-            
+            if (! myevent.y_peak.empty()){
+            //for (auto i: myevent.y_peak)
+                //std::cout << i << std::endl;
+
+
+            int maxElementIndex = std::max_element(myevent.y_peak.begin(),myevent.y_peak.end()) - myevent.y_peak.begin();
+            int maxElement = *std::max_element(myevent.y_peak.begin(), myevent.y_peak.end());
+            double tailIntegral = 0;
+            if (verbose) 
+                std::cout << "maxElementIndex:" << maxElementIndex << ", maxElement:" << maxElement << '\n';
+
+            for (auto ix: myevent.x_peak ){
+                if (ix < myevent.x_peak.at(maxElementIndex) ){
+                    h_count_peaks_entries->Fill(1); //if peak is on the left of the max peak
+                    h_distancetomaxAmppeak_left->Fill(ix-myevent.x_peak.at(maxElementIndex));  //the histo should give only negative numbers
+                    distmaxAmppeaks_left = ix-myevent.x_peak.at(maxElementIndex);
+                    //std::cout<< " left peak - distance: " << ix-myevent.x_peak.at(maxElementIndex)<< std::endl;
+                    if (verbose) std::cout <<  ix  << " : filling 1 " << std::endl;
+                    }
+                else if (ix > myevent.x_peak.at(maxElementIndex) ){
+                    h_count_peaks_entries->Fill(2);  //if peak is on the right of the max peak
+                    h_distancetomaxAmppeak_right->Fill(ix-myevent.x_peak.at(maxElementIndex));//the histo should give only positive numbers
+                    distmaxAmppeaks_right = ix-myevent.x_peak.at(maxElementIndex); 
+                    //std::cout<< " right peak - distance: " << ix-myevent.x_peak.at(maxElementIndex) << std::endl;
+                     if (verbose) std::cout <<  ix << " : filling 2 "<< std::endl;
+                    }
+                else {
+                    h_count_peaks_entries->Fill(3);  //if peak is the same as the max peak (should be one per event)
+                    if (verbose) std::cout <<  ix  << " : filling 3 "<< std::endl;
+
+                    // compute waveform integral starting from the max peak to the end of the waveform
+                    for (int isample = ix -25; isample < myevent.GetAvgMeanWaveform()->size(); isample++) {
+                        tailIntegral += myevent.GetAvgMeanWaveform()->at(isample);
+                        h_tailIntegral->SetBinContent(isample,myevent.GetAvgMeanWaveform()->at(isample));
+                    }
+
+                    for (int isample = 0; isample < ix -25; isample++)
+                         h_tailIntegral->SetBinContent(isample,0);
+                    }
+            }
+
+            h_tailInt->Fill(tailIntegral);
+            tailInt=tailIntegral; 
+
+
+            }                
 
             h_goodpeaksperevt->Fill(myevent.ngoodpeaks);
 
@@ -362,7 +421,8 @@ int main(int argc, char *argv[]){
                 c->cd(1);
 
                 h_AvgMeanwaveform->Draw("HIST");
-            
+                
+
                 // to draw the markers for the found peaks 
                 Double_t *xp = new Double_t[50];
                 Double_t *yp = new Double_t[50]; 
@@ -390,7 +450,12 @@ int main(int argc, char *argv[]){
                 h_AvgMeanwaveform->Draw("");
 
                 h_waveform->Draw("HISTsame");
-            
+
+                h_tailIntegral->SetLineColor(kRed);
+                h_tailIntegral->SetFillStyle(3352);
+                h_tailIntegral->SetFillColor(kRed);
+                h_tailIntegral->Draw("same");
+
                 delete [] xp;
                 delete [] yp;
 
@@ -407,16 +472,20 @@ int main(int argc, char *argv[]){
     npeaks=myevent.ngoodpeaks;
     peakAmp=myevent.y_peak;
     peakInt=myevent.peak_integral;
+    tailInt=myevent.tailIntegral;
+    
 
     output_tree->Fill();
     }
 
-
+    /*
     std::cout << " pe entries : \n " ; 
     std::cout << "1 p.e : " <<  h_count_pe_entries->GetBinContent(2) << "\n ";
     std::cout << "2 p.e : " <<  h_count_pe_entries->GetBinContent(3) << "\n ";
     std::cout << "3 p.e : " <<  h_count_pe_entries->GetBinContent(4) << "\n ";
-    
+    */
+
+
     TCanvas* c1 = new TCanvas("c1", "c1", 1200, 1000);
     c1->Divide(3,2);   
     c1->cd(1);
@@ -439,14 +508,23 @@ int main(int argc, char *argv[]){
 
     TCanvas* c2 = new TCanvas("c2", "c2", 1000, 700);
     c2->cd();
-    h_noisefreq->GetYaxis()->SetRangeUser(1000,12000);
+    //h_noisefreq->GetYaxis()->SetRangeUser(1000,12000);
     h_noisefreq->Draw();
     // Close the file
     //file->Close();
     
-    TCanvas* c3 = new TCanvas("c3", "c3", 600, 700);
-    c3->cd();
-    h_count_pe_entries->Draw();
+    TCanvas* c3 = new TCanvas("c3", "c3", 1500, 500);
+    c3->Divide(3,1);
+    c3->cd(1);
+    h_count_peaks_entries->Draw();
+    c3->cd(2);
+    h_tailInt->Draw();
+
+    c3->cd(3);
+    h_distancetomaxAmppeak_right->SetLineColor(kRed);
+    h_distancetomaxAmppeak_right->Draw();
+    h_distancetomaxAmppeak_left->SetLineColor(kBlue);
+    h_distancetomaxAmppeak_left->Draw("same");
     
     
     //before closing produce an output tree
