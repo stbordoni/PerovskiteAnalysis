@@ -4,6 +4,9 @@
 #include <TH1.h>
 #include <TH2.h>
 #include <TMath.h>
+#include <TLine.h>
+#include <TLegend.h>
+
 
 #include <iostream>
 #include "TApplication.h"
@@ -98,6 +101,24 @@ int main(int argc, char *argv[]){
 
         std::cout << "Renamed: " << filename << " to " << outputana_filename << std::endl;
     }
+
+    // Extract the details of the run to be used to save plots..
+    std::string Runname; 
+    // Find the last slash
+    size_t lastSlash = outputana_filename.find_last_of('/');
+    
+    // Find the first underscore after "Run_"
+    size_t runStart = outputana_filename.find("Run_", lastSlash); // Start of "Run_"
+    size_t runEnd = outputana_filename.find("_Data_", runStart);  // End of "Run_*_Cs104-A"
+
+    // Extract the substring
+    if (runStart != std::string::npos && runEnd != std::string::npos) {
+        Runname = outputana_filename.substr(runStart, runEnd - runStart);
+        std::cout << "Extracted part: " << Runname << std::endl;
+    } else {
+        std::cout << "Unable to extract the desired part of the string." << std::endl;
+    }
+
 
     //FileOutput = new TFile(fileOut.Data(),"RECREATE");
     FileOutput = new TFile(outputana_filename.c_str(),"RECREATE");
@@ -221,7 +242,12 @@ int main(int argc, char *argv[]){
 
         if ((ievt+1)%100 == 0) 
             std::cout << "====== EVENT " << ievt+1 << "======" << std::endl;
-        
+
+        h_waveform->Reset();
+        h_AvgMeanwaveform->Reset();
+        h_waveforminTime->Reset();
+        h_tailIntegral->Reset();
+
         eventTree->GetEntry(ievt);
         if (ievt>0)
             h_1dMagRaw->Clear();
@@ -307,7 +333,7 @@ int main(int argc, char *argv[]){
                 Int_t bin = h_AvgMeanwaveform->GetXaxis()->FindBin(xp);
                 Double_t yp = h_AvgMeanwaveform->GetBinContent(bin);
 
-                if (yp > 3*myevent.baseline) {
+                if (yp > 3*fabs(myevent.baseline)) {
                     //couont and record the information about the good peaks    
                     myevent.ngoodpeaks++;
                     myevent.x_peak.push_back(xp);
@@ -337,7 +363,7 @@ int main(int argc, char *argv[]){
             }
 
             if (verbose) 
-            std::cout << "found " << myevent.ngoodpeaks << " good peaks (i.e. x5*baseline) with baseline =" << myevent.baseline << std::endl;
+            std::cout << "found " << myevent.ngoodpeaks << " good peaks (i.e. x3*baseline) with baseline =" << myevent.baseline << std::endl;
             
             if (! myevent.y_peak.empty()){
             //for (auto i: myevent.y_peak)
@@ -456,6 +482,27 @@ int main(int argc, char *argv[]){
                 h_tailIntegral->SetFillColor(kRed);
                 h_tailIntegral->Draw("same");
 
+                TLine *l_baseline = new TLine(0, myevent.baseline, 1023, myevent.baseline);
+                l_baseline->SetLineColor(kBlue);
+                l_baseline->SetLineStyle(9);
+                l_baseline->SetLineWidth(2);
+
+                TLine *l_peakthrsld = new TLine(0, 3*fabs(myevent.baseline), 1023, 3*fabs(myevent.baseline));
+                l_peakthrsld->SetLineColor(kBlack);
+                l_peakthrsld->SetLineStyle(4);
+                l_peakthrsld->SetLineWidth(2);
+
+                l_baseline->Draw("same");
+                l_peakthrsld->Draw("same");
+
+                TLegend *leg = new TLegend(0.1,0.7,0.48,0.9);
+                leg->AddEntry("h_waveform", "raw waveform ", "l");
+                leg->AddEntry("h_AvgMeanwaveform", "waveform (after running average)", "l");
+                leg->AddEntry("h_tailIntegral", "tail Integral", "l");
+                leg->AddEntry(l_baseline, "baseline", "l");
+                leg->AddEntry(l_peakthrsld, "peak threshold", "l");
+                leg->Draw("same");
+
                 delete [] xp;
                 delete [] yp;
 
@@ -485,6 +532,8 @@ int main(int argc, char *argv[]){
     std::cout << "3 p.e : " <<  h_count_pe_entries->GetBinContent(4) << "\n ";
     */
 
+   //output path for plots
+    TString plotspath="/Users/bordonis/ResearchActivities/PerovskiteAnalysis/PeroAna/Plots/";
 
     TCanvas* c1 = new TCanvas("c1", "c1", 1200, 1000);
     c1->Divide(3,2);   
@@ -506,18 +555,23 @@ int main(int argc, char *argv[]){
     h_peakAmp_vs_peakI->GetYaxis()->SetTitle("peak Integral [V]");
     h_peakAmp_vs_peakI->Draw("COLZ");
 
+    c1->SaveAs(plotspath+Runname+"_spectra.pdf");
+
     TCanvas* c2 = new TCanvas("c2", "c2", 1000, 700);
     c2->cd();
     //h_noisefreq->GetYaxis()->SetRangeUser(1000,12000);
     h_noisefreq->Draw();
     // Close the file
     //file->Close();
+
+    c2->SaveAs(plotspath+Runname+"_noisefreq.pdf");
     
     TCanvas* c3 = new TCanvas("c3", "c3", 1500, 500);
     c3->Divide(3,1);
     c3->cd(1);
     h_count_peaks_entries->Draw();
     c3->cd(2);
+    gPad->SetLogy();
     h_tailInt->Draw();
 
     c3->cd(3);
@@ -525,7 +579,7 @@ int main(int argc, char *argv[]){
     h_distancetomaxAmppeak_right->Draw();
     h_distancetomaxAmppeak_left->SetLineColor(kBlue);
     h_distancetomaxAmppeak_left->Draw("same");
-    
+    c3->SaveAs(plotspath+Runname+"_secondarypeaks.pdf");
     
     //before closing produce an output tree
 
