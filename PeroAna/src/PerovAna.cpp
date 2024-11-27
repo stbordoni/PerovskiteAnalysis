@@ -620,9 +620,11 @@ int main(int argc, char *argv[]){
         }
         else {
             c4->cd(1);
+            gPad->SetLogy();
             h_position_peak.at(i)->Draw();
-            leg_peaks->AddEntry("h_position_peak.at(i)", Form("position of main peak",i), "l");
+            leg_peaks->AddEntry("h_position_peak.at(i)", "Position of main peak", "l");
             c4->cd(2);
+            gPad->SetLogy();
             h_distance_peak.at(i)->Draw();
         }
     }
