@@ -210,6 +210,15 @@ int main(int argc, char *argv[]){
     TH1F* h_distancetomaxAmppeak_left = new TH1F("h_distancetomaxAmppeak_left", "", nSamples, -500, 524 );
     TH1F* h_distancetomaxAmppeak_right = new TH1F("h_distancetomaxAmppeak_right","", nSamples, -500, 524 );
 
+    std::vector <TH1F*> h_position_peak;
+    std::vector <TH1F*> h_distance_peak;
+
+    h_position_peak.reserve(10);
+    h_distance_peak.reserve(10);
+    for (int i = 0; i<20; i++){
+        h_position_peak.emplace_back(new TH1F(Form("h_position_peak_%d", i), Form("position peak %d",i), nSamples/4, 0, 1023 ));
+        h_distance_peak.emplace_back(new TH1F(Form("h_distance_peak_%d", i), Form("distance peak %d",i), nSamples/4, -500, 524 ));
+    }
 
     TH1F* h_waveform = new TH1F("h_waveform","", nSamples,0,1023);
     TH1F* h_waveforminTime = new TH1F("h_waveforminTime","", nSamples,0*0.3125,1023*0.3125);
@@ -320,7 +329,7 @@ int main(int argc, char *argv[]){
             // Use TSpectrum to find the peak candidates
             TSpectrum *s = new TSpectrum(2*npeaks);
             
-            Int_t nfound = s->Search(h_AvgMeanwaveform, 20, "goff", 0.1);
+            Int_t nfound = s->Search(h_AvgMeanwaveform, 10, "goff", 0.05);
             if (verbose) printf("Found %d candidate peaks to fit\n",nfound);
 
             Double_t *xpeaks;
@@ -376,6 +385,8 @@ int main(int argc, char *argv[]){
             if (verbose) 
                 std::cout << "maxElementIndex:" << maxElementIndex << ", maxElement:" << maxElement << '\n';
 
+            std::vector <double> x_peak_right;                    
+            int countpeaks_right=0;
             for (auto ix: myevent.x_peak ){
                 if (ix < myevent.x_peak.at(maxElementIndex) ){
                     h_count_peaks_entries->Fill(1); //if peak is on the left of the max peak
@@ -388,12 +399,18 @@ int main(int argc, char *argv[]){
                     h_count_peaks_entries->Fill(2);  //if peak is on the right of the max peak
                     h_distancetomaxAmppeak_right->Fill(ix-myevent.x_peak.at(maxElementIndex));//the histo should give only positive numbers
                     distmaxAmppeaks_right = ix-myevent.x_peak.at(maxElementIndex); 
+                    h_position_peak.at(countpeaks_right)->Fill(ix);
+                    h_distance_peak.at(countpeaks_right)->Fill(ix-myevent.x_peak.at(maxElementIndex));
+                    
+                    
                     //std::cout<< " right peak - distance: " << ix-myevent.x_peak.at(maxElementIndex) << std::endl;
                      if (verbose) std::cout <<  ix << " : filling 2 "<< std::endl;
                     }
                 else {
                     h_count_peaks_entries->Fill(3);  //if peak is the same as the max peak (should be one per event)
                     if (verbose) std::cout <<  ix  << " : filling 3 "<< std::endl;
+                    h_position_peak.at(0)->Fill(ix); // filling the position of the main peak
+                    h_distance_peak.at(0)->Fill(ix-myevent.x_peak.at(maxElementIndex));
 
                     // compute waveform integral starting from the max peak to the end of the waveform
                     for (int isample = ix -25; isample < myevent.GetAvgMeanWaveform()->size(); isample++) {
@@ -404,6 +421,7 @@ int main(int argc, char *argv[]){
                     for (int isample = 0; isample < ix -25; isample++)
                          h_tailIntegral->SetBinContent(isample,0);
                     }
+                countpeaks_right++;
             }
 
             h_tailInt->Fill(tailIntegral);
@@ -581,9 +599,39 @@ int main(int argc, char *argv[]){
     h_distancetomaxAmppeak_left->Draw("same");
     c3->SaveAs(plotspath+Runname+"_secondarypeaks.pdf");
     
+
+    TCanvas* c4 = new TCanvas("c4", "c4", 1500, 500);
+    c4->Divide(2,1);
+    
+    std::vector <Color_t> color = {kBlack, kRed, kOrange, kOrange-3, kOrange-9};
+
+    TLegend *leg_peaks = new TLegend(0.1,0.7,0.48,0.9);
+    
+    //for (int i=0; i<h_position_peak.size(); i++){
+    for (int i=0; i<5; i++){
+        h_position_peak.at(i)->SetLineColor(color.at(i));
+        h_distance_peak.at(i)->SetLineColor(color.at(i));
+        if (i>0) {
+            c4->cd(1);
+            h_position_peak.at(i)->Draw("same");
+            leg_peaks->AddEntry(h_position_peak.at(i), Form("position of %d secondary peak",i), "l");
+            c4->cd(2);
+            h_distance_peak.at(i)->Draw("same");
+        }
+        else {
+            c4->cd(1);
+            h_position_peak.at(i)->Draw();
+            leg_peaks->AddEntry("h_position_peak.at(i)", Form("position of main peak",i), "l");
+            c4->cd(2);
+            h_distance_peak.at(i)->Draw();
+        }
+    }
+    c4->cd(1);
+    leg_peaks->Draw("same");
+
+    c3->SaveAs(plotspath+Runname+"_secondarypeaks_distance.pdf");
+
     //before closing produce an output tree
-
-
     FileOutput->cd();
     output_tree->Write();
     FileOutput->Close();
