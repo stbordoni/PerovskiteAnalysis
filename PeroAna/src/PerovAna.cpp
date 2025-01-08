@@ -1,6 +1,7 @@
 #include <TFile.h>
 #include <TTree.h>
 #include <TCanvas.h>
+#include <TPaveText.h>
 #include <TF1.h>
 #include <TH1.h>
 #include <TH2.h>
@@ -529,6 +530,15 @@ int main(int argc, char *argv[]){
                 leg->AddEntry(l_baseline, "baseline", "l");
                 leg->AddEntry(l_peakthrsld, "peak threshold", "l");
                 leg->Draw("same");
+
+
+                TPaveText *pt = new TPaveText(0.5,0.5,0.9,0.65,"nbNDC");
+                pt->SetTextSize(0.04);
+                pt->SetFillColor(0);
+                pt->SetTextAlign(12);
+                pt->AddText(Form("max peak %f", myevent.y_peak.at(0))); //0 should be the max element
+                pt->AddText(Form("Tail Integral %f", myevent.tailIntegral));
+                pt->Draw();
 
                 delete [] xp;
                 delete [] yp;
