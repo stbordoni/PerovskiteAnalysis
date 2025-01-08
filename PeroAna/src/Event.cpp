@@ -7,6 +7,7 @@
 Event::Event(int evt, int chan, const std::vector<double>& wave)
     : eventId(evt), channelId(chan), rawWaveform(new std::vector<double>(wave)) 
 {
+    Init();
     // Additional initialization if needed
 }
 
@@ -18,7 +19,7 @@ Event::~Event() {
 
 void Event::Init(){
 
-    std::cout<< " Initialize event " << std::endl;
+    //std::cout<< " Initialize event " << std::endl;
     tailIntegral=0; 
     ngoodpeaks=0;
     //setEventId();

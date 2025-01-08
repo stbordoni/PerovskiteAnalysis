@@ -1,6 +1,7 @@
 #include <TFile.h>
 #include <TTree.h>
 #include <TCanvas.h>
+#include <TF1.h>
 #include <TH1.h>
 #include <TH2.h>
 #include <TMath.h>
@@ -88,6 +89,7 @@ int main(int argc, char *argv[]){
     
     Int_t nSamples = 1024;
 
+    
     TFile* FileOutput   ; 
     std::string outputana_filename;
     //create the filename of the output file from the current input filename. Just replacing _output.root to _ana.root 
@@ -202,31 +204,36 @@ int main(int argc, char *argv[]){
     // ...
 
     TH1F* h_baseline = new TH1F("h_baseline","", 250, 10, 10);
-    TH1F* h_maxAmp   = new TH1F("h_maxAmp","", 250, 10, 10);
+    TH1F* h_maxAmp   = new TH1F("h_maxAmp","", 100, 10, 10);
     TH1F* h_integral = new TH1F("h_integral","", 100, 10,10);
     TH1F* h_peakInt  = new TH1F("h_peakInt", "", 100, 10,10);
     TH1F* h_tailInt  = new TH1F("h_tailInt", "", 100, 10,10);
     TH1F* h_goodpeaksperevt = new TH1F("h_goodpeaksperevt", "", 15, -0.5, 14.5);    
-    TH1F* h_distancetomaxAmppeak_left = new TH1F("h_distancetomaxAmppeak_left", "", nSamples, -500, 524 );
-    TH1F* h_distancetomaxAmppeak_right = new TH1F("h_distancetomaxAmppeak_right","", nSamples, -500, 524 );
+    //TH1F* h_distancetomaxAmppeak_left = new TH1F("h_distancetomaxAmppeak_left", "", nSamples, -500, 524 );
+    //TH1F* h_distancetomaxAmppeak_right = new TH1F("h_distancetomaxAmppeak_right","", nSamples, -500, 524 );
+    TH1F* h_distancetomaxAmppeak_left = new TH1F("h_distancetomaxAmppeak_left", "", nSamples, -200, 824 );
+    TH1F* h_distancetomaxAmppeak_right = new TH1F("h_distancetomaxAmppeak_right","", nSamples, -200, 824 );
+
 
     std::vector <TH1F*> h_position_peak;
     std::vector <TH1F*> h_distance_peak;
 
     h_position_peak.reserve(10);
     h_distance_peak.reserve(10);
-    for (int i = 0; i<20; i++){
+    for (int i = 0; i<10; i++){
         h_position_peak.emplace_back(new TH1F(Form("h_position_peak_%d", i), Form("position peak %d",i), nSamples/4, 0, 1023 ));
         h_distance_peak.emplace_back(new TH1F(Form("h_distance_peak_%d", i), Form("distance peak %d",i), nSamples/4, -500, 524 ));
     }
 
-    TH1F* h_waveform = new TH1F("h_waveform","", nSamples,0,1023);
+    TH1F* h_waveform = new TH1F("h_waveform","raw waveform", nSamples,0,1023);
     TH1F* h_waveforminTime = new TH1F("h_waveforminTime","", nSamples,0*0.3125,1023*0.3125);
     TH1F* h_AvgMeanwaveform = new TH1F("h_AvgMeanwaveform","", nSamples,0,1023);
+    h_AvgMeanwaveform->SetLineColor(1);
+    h_AvgMeanwaveform->SetLineWidth(3);
     TH1F* h_tailIntegral = new TH1F("h_tailIntegral","", nSamples,0,1023);
 
-    TH1F* h_peakAmp   = new TH1F("h_peakAmp","", 250, 10, 10);
-    TH2F* h_peakAmp_vs_peakI = new TH2F("h_peakAmp_vs_peakI","" ,250, 10, 10, 100, 10,10);
+    TH1F* h_peakAmp   = new TH1F("h_peakAmp","", 100, 10, 10);
+    TH2F* h_peakAmp_vs_peakI = new TH2F("h_peakAmp_vs_peakI","" ,100, 10, 10, 100, 10,10);
 
     TH1F *h_count_peaks_entries = new TH1F("h_count_peaks_entries", "counting peaks entries", 5, -0.5, 4.5); 
     
@@ -245,7 +252,7 @@ int main(int argc, char *argv[]){
     std::cout << "entries " << nEntries << std::endl;
 
     
-    //for (Long64_t ievt = 0; ievt < 50; ievt++) {
+    //for (Long64_t ievt = 2350; ievt < nEntries-1; ievt++) {
     for (Long64_t ievt = 0; ievt < nEntries-1; ievt++) {
         //std::cout << "====== EVENT " << ievt+1 << "======" << std::endl;
 
@@ -263,20 +270,25 @@ int main(int argc, char *argv[]){
         
 
         Event myevent(eventData.event, eventData.channelId, *eventData.dataSamples);
-        
+    
+       
+
+
         if (myevent.GetRawWaveform()->size()<nSamples){
             std::cout << "Error on Event " <<  myevent.GetEventId() << ": waveform corrupted (<1024 samples) --> "<< myevent.GetRawWaveform()->size()  << std::endl;
             continue;
         } 
         else{
         
-            
+                   
             myevent.ComputeMovingAverage(20, verbose);
             myevent.ComputeBaseline(mitigate_noise);
             myevent.SubtractBaseline(mitigate_noise);
-
+            
             myevent.ComputeIntegral();
             myevent.FindMaxAmp();
+
+
 
             // to printout the waveform
             //if (verbose){
@@ -296,10 +308,6 @@ int main(int argc, char *argv[]){
 
             //ToDO: if it is possible to use TSpectrum over the array of values and not the histo 
             //then remove all this histo part to the displaywave block
-            h_AvgMeanwaveform->SetLineColor(1);
-            h_AvgMeanwaveform->SetLineWidth(3);
-            
-
             for(int isample=0; isample<nSamples; isample++){
                 if (isample>10) {
                     h_waveform->SetBinContent(isample,myevent.GetRawWaveform()->at(isample)); //raw waveform
@@ -316,15 +324,17 @@ int main(int argc, char *argv[]){
 
 
             
-	
-
-
             //search for peaks in the waveform 
             Int_t np=20;
             Int_t npeaks = TMath::Abs(np);
 
-            //Int_t ngoodpeaks =0;
             myevent.ngoodpeaks =0;
+
+            // set value to define a good peak
+
+            double peak_thsld = 0.002; // hard cut on the assumed value of a single p.e of ~3mV
+            //  double peak_thsld = 5*fabs(myevent.baseline);
+
 
             // Use TSpectrum to find the peak candidates
             TSpectrum *s = new TSpectrum(2*npeaks);
@@ -342,9 +352,11 @@ int main(int argc, char *argv[]){
                 Int_t bin = h_AvgMeanwaveform->GetXaxis()->FindBin(xp);
                 Double_t yp = h_AvgMeanwaveform->GetBinContent(bin);
 
-                if (yp > 3*fabs(myevent.baseline)) {
+                //if (yp > 5*fabs(myevent.baseline)) {
+                //if (yp > 0.002) { //hard cut on 2mV threshold (assuming 1 p.e. to be of 3mV)
+                if (yp > peak_thsld){ 
                     //couont and record the information about the good peaks    
-                    myevent.ngoodpeaks++;
+                    myevent.ngoodpeaks++;         
                     myevent.x_peak.push_back(xp);
                     myevent.y_peak.push_back(yp);
                     if (verbose) std::cout << " found a good peak  x: " << xp << " ; y: " << yp << std::endl;
@@ -356,82 +368,71 @@ int main(int argc, char *argv[]){
                     h_peakInt->Fill(localI);
                     h_peakAmp->Fill(yp);
                     h_peakAmp_vs_peakI->Fill(yp, localI); 
-
-                    
-
-
-                    //to count entries in each pe peak 
-                    /*if ( (yp > 0.0017) && (yp < 0.0035) )
-                        h_count_pe_entries->Fill(1.);
-                    else if  ( (yp > 0.0043) && (yp < 0.0055) )
-                        h_count_pe_entries->Fill(2.);
-                    else if ( (yp > 0.0065) &&  (yp < 0.0080) )
-                        h_count_pe_entries->Fill(3.);
-                        */
+                  
                 }
             }
 
+            
             if (verbose) 
             std::cout << "found " << myevent.ngoodpeaks << " good peaks (i.e. x3*baseline) with baseline =" << myevent.baseline << std::endl;
             
             if (! myevent.y_peak.empty()){
-            //for (auto i: myevent.y_peak)
-                //std::cout << i << std::endl;
+        
+                int maxElementIndex = std::max_element(myevent.y_peak.begin(),myevent.y_peak.end()) - myevent.y_peak.begin();
+                int maxElement = *std::max_element(myevent.y_peak.begin(), myevent.y_peak.end());
+                double tailIntegral = 0;
+                if (verbose) 
+                    std::cout << "maxElementIndex:" << maxElementIndex << ", maxElement:" << maxElement << '\n';
 
+                std::vector <double> x_peak_right;                    
+                int countpeaks_right=0;
+                int countpeaks_left=0;
+                for (auto ix: myevent.x_peak ){
+                    if (ix < myevent.x_peak.at(maxElementIndex) ){
+                        h_count_peaks_entries->Fill(1); //if peak is on the left of the max peak
+                        countpeaks_left++;
+                        h_distancetomaxAmppeak_left->Fill(ix-myevent.x_peak.at(maxElementIndex));  //the histo should give only negative numbers
+                        distmaxAmppeaks_left = ix-myevent.x_peak.at(maxElementIndex);
+                        //std::cout<< " left peak - distance: " << ix-myevent.x_peak.at(maxElementIndex)<< std::endl;
+                        if (verbose) std::cout <<  ix  << " : filling 1 " << std::endl;
+                        }
+                    else if (ix > myevent.x_peak.at(maxElementIndex) ){
+                        h_count_peaks_entries->Fill(2);  //if peak is on the right of the max peak
+                        countpeaks_right++;
+                        h_distancetomaxAmppeak_right->Fill(ix-myevent.x_peak.at(maxElementIndex));//the histo should give only positive numbers
+                        distmaxAmppeaks_right = ix-myevent.x_peak.at(maxElementIndex); 
+                        if (countpeaks_right < 10){
+                            h_position_peak.at(countpeaks_right)->Fill(ix);
+                            h_distance_peak.at(countpeaks_right)->Fill(ix-myevent.x_peak.at(maxElementIndex));
+                        }
+                        
+                        //std::cout<< " right peak - distance: " << ix-myevent.x_peak.at(maxElementIndex) << std::endl;
+                        if (verbose) std::cout <<  ix << " : filling 2 "<< std::endl;
+                        }
+                    else {
+                        h_count_peaks_entries->Fill(3);  //if peak is the same as the max peak (should be one per event)
+                        if (verbose) std::cout <<  ix  << " : filling 3 "<< std::endl;
+                        h_position_peak.at(0)->Fill(ix); // filling the position of the main peak
+                        h_distance_peak.at(0)->Fill(ix-myevent.x_peak.at(maxElementIndex));
 
-            int maxElementIndex = std::max_element(myevent.y_peak.begin(),myevent.y_peak.end()) - myevent.y_peak.begin();
-            int maxElement = *std::max_element(myevent.y_peak.begin(), myevent.y_peak.end());
-            double tailIntegral = 0;
-            if (verbose) 
-                std::cout << "maxElementIndex:" << maxElementIndex << ", maxElement:" << maxElement << '\n';
+                        // compute waveform integral starting from the max peak to the end of the waveform
+                        for (int isample = ix -25; isample < myevent.GetAvgMeanWaveform()->size(); isample++) {
+                            tailIntegral += myevent.GetAvgMeanWaveform()->at(isample);
+                            h_tailIntegral->SetBinContent(isample,myevent.GetAvgMeanWaveform()->at(isample));
+                        }
 
-            std::vector <double> x_peak_right;                    
-            int countpeaks_right=0;
-            for (auto ix: myevent.x_peak ){
-                if (ix < myevent.x_peak.at(maxElementIndex) ){
-                    h_count_peaks_entries->Fill(1); //if peak is on the left of the max peak
-                    h_distancetomaxAmppeak_left->Fill(ix-myevent.x_peak.at(maxElementIndex));  //the histo should give only negative numbers
-                    distmaxAmppeaks_left = ix-myevent.x_peak.at(maxElementIndex);
-                    //std::cout<< " left peak - distance: " << ix-myevent.x_peak.at(maxElementIndex)<< std::endl;
-                    if (verbose) std::cout <<  ix  << " : filling 1 " << std::endl;
+                        for (int isample = 0; isample < ix -25; isample++)
+                            h_tailIntegral->SetBinContent(isample,0);
                     }
-                else if (ix > myevent.x_peak.at(maxElementIndex) ){
-                    h_count_peaks_entries->Fill(2);  //if peak is on the right of the max peak
-                    h_distancetomaxAmppeak_right->Fill(ix-myevent.x_peak.at(maxElementIndex));//the histo should give only positive numbers
-                    distmaxAmppeaks_right = ix-myevent.x_peak.at(maxElementIndex); 
-                    h_position_peak.at(countpeaks_right)->Fill(ix);
-                    h_distance_peak.at(countpeaks_right)->Fill(ix-myevent.x_peak.at(maxElementIndex));
-                    
-                    
-                    //std::cout<< " right peak - distance: " << ix-myevent.x_peak.at(maxElementIndex) << std::endl;
-                     if (verbose) std::cout <<  ix << " : filling 2 "<< std::endl;
-                    }
-                else {
-                    h_count_peaks_entries->Fill(3);  //if peak is the same as the max peak (should be one per event)
-                    if (verbose) std::cout <<  ix  << " : filling 3 "<< std::endl;
-                    h_position_peak.at(0)->Fill(ix); // filling the position of the main peak
-                    h_distance_peak.at(0)->Fill(ix-myevent.x_peak.at(maxElementIndex));
+                    //countpeaks_right++;
+                }
 
-                    // compute waveform integral starting from the max peak to the end of the waveform
-                    for (int isample = ix -25; isample < myevent.GetAvgMeanWaveform()->size(); isample++) {
-                        tailIntegral += myevent.GetAvgMeanWaveform()->at(isample);
-                        h_tailIntegral->SetBinContent(isample,myevent.GetAvgMeanWaveform()->at(isample));
-                    }
-
-                    for (int isample = 0; isample < ix -25; isample++)
-                         h_tailIntegral->SetBinContent(isample,0);
-                    }
-                countpeaks_right++;
-            }
-
-            h_tailInt->Fill(tailIntegral);
-            tailInt=tailIntegral; 
-
-
+                h_tailInt->Fill(tailIntegral);
+                tailInt=tailIntegral; 
             }                
 
             h_goodpeaksperevt->Fill(myevent.ngoodpeaks);
-
+            
             
             //noise study
            
@@ -460,9 +461,11 @@ int main(int argc, char *argv[]){
             // routine to display the waveforms one by one and monitor the peak searches
             if (displaywave){
                 
+                std::cout << " Event "<< ievt << std::endl;
                 
                 TCanvas* c = new TCanvas("c", "c", 1000, 700);
                 c->cd(1);
+                c->SetTitle(Form("Event %d", (int)ievt));
 
                 h_AvgMeanwaveform->Draw("HIST");
                 
@@ -505,7 +508,9 @@ int main(int argc, char *argv[]){
                 l_baseline->SetLineStyle(9);
                 l_baseline->SetLineWidth(2);
 
-                TLine *l_peakthrsld = new TLine(0, 3*fabs(myevent.baseline), 1023, 3*fabs(myevent.baseline));
+                //TLine *l_peakthrsld = new TLine(0, 5*fabs(myevent.baseline), 1023, 5*fabs(myevent.baseline));
+                //TLine *l_peakthrsld = new TLine(0, 0.002, 1023, 0.002);
+                TLine *l_peakthrsld = new TLine(0, peak_thsld, 1023, peak_thsld);
                 l_peakthrsld->SetLineColor(kBlack);
                 l_peakthrsld->SetLineStyle(4);
                 l_peakthrsld->SetLineWidth(2);
@@ -513,10 +518,13 @@ int main(int argc, char *argv[]){
                 l_baseline->Draw("same");
                 l_peakthrsld->Draw("same");
 
-                TLegend *leg = new TLegend(0.1,0.7,0.48,0.9);
+                
+                
+                //TLegend *leg = new TLegend(0.1,0.7,0.48,0.9);
+                TLegend *leg = new TLegend();
                 leg->AddEntry("h_waveform", "raw waveform ", "l");
                 leg->AddEntry("h_AvgMeanwaveform", "waveform (after running average)", "l");
-                leg->AddEntry("h_tailIntegral", "tail Integral", "l");
+                leg->AddEntry("h_tailIntegral", "tail Integral", "f");
                 leg->AddEntry(l_baseline, "baseline", "l");
                 leg->AddEntry(l_peakthrsld, "peak threshold", "l");
                 leg->Draw("same");
@@ -529,9 +537,19 @@ int main(int argc, char *argv[]){
 
                 delete c;
                      
-            }
-        }   
+            }//end displaywave
     
+            baseline=myevent.baseline;
+            pulseInt=myevent.integral;
+            npeaks=myevent.ngoodpeaks;
+            peakAmp=myevent.y_peak;
+            peakInt=myevent.peak_integral;
+            tailInt=myevent.tailIntegral;
+            
+            output_tree->Fill();
+        }   
+
+    /*
     baseline=myevent.baseline;
     pulseInt=myevent.integral;
     npeaks=myevent.ngoodpeaks;
@@ -539,16 +557,9 @@ int main(int argc, char *argv[]){
     peakInt=myevent.peak_integral;
     tailInt=myevent.tailIntegral;
     
-
-    output_tree->Fill();
+    output_tree->Fill();*/
     }
 
-    /*
-    std::cout << " pe entries : \n " ; 
-    std::cout << "1 p.e : " <<  h_count_pe_entries->GetBinContent(2) << "\n ";
-    std::cout << "2 p.e : " <<  h_count_pe_entries->GetBinContent(3) << "\n ";
-    std::cout << "3 p.e : " <<  h_count_pe_entries->GetBinContent(4) << "\n ";
-    */
 
    //output path for plots
     TString plotspath="/Users/bordonis/ResearchActivities/PerovskiteAnalysis/PeroAna/Plots/";
@@ -573,7 +584,7 @@ int main(int argc, char *argv[]){
     h_peakAmp_vs_peakI->GetYaxis()->SetTitle("peak Integral [V]");
     h_peakAmp_vs_peakI->Draw("COLZ");
 
-    c1->SaveAs(plotspath+Runname+"_spectra.pdf");
+    c1->SaveAs(plotspath+Runname+"_spectra_2mVthr.pdf");
 
     TCanvas* c2 = new TCanvas("c2", "c2", 1000, 700);
     c2->cd();
@@ -597,7 +608,7 @@ int main(int argc, char *argv[]){
     h_distancetomaxAmppeak_right->Draw();
     h_distancetomaxAmppeak_left->SetLineColor(kBlue);
     h_distancetomaxAmppeak_left->Draw("same");
-    c3->SaveAs(plotspath+Runname+"_secondarypeaks.pdf");
+    c3->SaveAs(plotspath+Runname+"_secondarypeaks_2mVthr.pdf");
     
 
     TCanvas* c4 = new TCanvas("c4", "c4", 1500, 500);
@@ -631,7 +642,7 @@ int main(int argc, char *argv[]){
     c4->cd(1);
     leg_peaks->Draw("same");
 
-    c3->SaveAs(plotspath+Runname+"_secondarypeaks_distance.pdf");
+    c4->SaveAs(plotspath+Runname+"_secondarypeaks_distance_2mVthr.pdf");
 
     //before closing produce an output tree
     FileOutput->cd();
