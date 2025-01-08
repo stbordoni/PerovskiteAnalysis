@@ -380,7 +380,7 @@ int main(int argc, char *argv[]){
         
                 int maxElementIndex = std::max_element(myevent.y_peak.begin(),myevent.y_peak.end()) - myevent.y_peak.begin();
                 int maxElement = *std::max_element(myevent.y_peak.begin(), myevent.y_peak.end());
-                double tailIntegral = 0;
+                //double tailIntegral = 0;
                 if (verbose) 
                     std::cout << "maxElementIndex:" << maxElementIndex << ", maxElement:" << maxElement << '\n';
 
@@ -417,7 +417,8 @@ int main(int argc, char *argv[]){
 
                         // compute waveform integral starting from the max peak to the end of the waveform
                         for (int isample = ix -25; isample < myevent.GetAvgMeanWaveform()->size(); isample++) {
-                            tailIntegral += myevent.GetAvgMeanWaveform()->at(isample);
+                            //tailIntegral += myevent.GetAvgMeanWaveform()->at(isample);
+                            myevent.tailIntegral += myevent.GetAvgMeanWaveform()->at(isample);
                             h_tailIntegral->SetBinContent(isample,myevent.GetAvgMeanWaveform()->at(isample));
                         }
 
@@ -427,8 +428,8 @@ int main(int argc, char *argv[]){
                     //countpeaks_right++;
                 }
 
-                h_tailInt->Fill(tailIntegral);
-                tailInt=tailIntegral; 
+                h_tailInt->Fill(myevent.tailIntegral);
+                //tailInt=tailIntegral; 
             }                
 
             h_goodpeaksperevt->Fill(myevent.ngoodpeaks);
@@ -539,6 +540,7 @@ int main(int argc, char *argv[]){
                      
             }//end displaywave
     
+            /*
             baseline=myevent.baseline;
             pulseInt=myevent.integral;
             npeaks=myevent.ngoodpeaks;
@@ -547,9 +549,10 @@ int main(int argc, char *argv[]){
             tailInt=myevent.tailIntegral;
             
             output_tree->Fill();
+            */
         }   
 
-    /*
+    
     baseline=myevent.baseline;
     pulseInt=myevent.integral;
     npeaks=myevent.ngoodpeaks;
@@ -557,7 +560,7 @@ int main(int argc, char *argv[]){
     peakInt=myevent.peak_integral;
     tailInt=myevent.tailIntegral;
     
-    output_tree->Fill();*/
+    output_tree->Fill();
     }
 
 
