@@ -76,10 +76,28 @@ void compareThreeRuns(TString f_1 ="run1",
 
     TCanvas *c1 = new TCanvas("c1", "Local integral", 800, 600);
     c1->cd();
-    if (tree1_ok) tree1->Draw("peakInt>>htemp1int(100, 0, 2)");     
+    if (tree1_ok) tree1->Draw("peakInt>>htemp1int(100, 0, 0.1)");     
     //htemp1->GetXaxis()->SetTitle("[V]");
     //htemp1->GetYaxis()->SetTitle("counts");
-    if (tree2_ok) tree2->Draw("peakInt>>htemp2int(100, 0, 2)", "", "sames");
-    if (tree3_ok) tree3->Draw("peakInt>>htemp3int(100, 0, 2)", "", "sames");
+    if (tree2_ok) tree2->Draw("peakInt>>htemp2int(100, 0, 0.1)", "", "sames");
+    if (tree3_ok) tree3->Draw("peakInt>>htemp3int(100, 0, 0.1)", "", "sames");
     leg->Draw("same");
+
+    TCanvas *c2 = new TCanvas("c2", " ", 1600, 600);
+    c2->Divide(2,1);
+    c2->cd(1);
+    if (tree1_ok) tree1->Draw("tailInt>>htemp1tail(100, 0, 2)");     
+    //htemp1->GetXaxis()->SetTitle("[V]");
+    //htemp1->GetYaxis()->SetTitle("counts");
+    if (tree2_ok) tree2->Draw("tailInt>>htemp2tail(100, 0, 2)", "", "sames");
+    if (tree3_ok) tree3->Draw("tailInt>>htemp3tail(100, 0, 2)", "", "sames");
+    leg->Draw("same");
+    
+    c2->cd(2);
+    if (tree1_ok) tree1->Draw("npeaks>>htemp1npeaks(12, -0.5, 11.5)");     
+    //htemp1->GetXaxis()->SetTitle("[V]");
+    //htemp1->GetYaxis()->SetTitle("counts");
+    if (tree2_ok) tree2->Draw("npeaks>>htemp2npeaks(12, -0.5, 11.5)", "", "sames");
+    if (tree3_ok) tree3->Draw("npeaks>>htemp3npeaks(12, -0.5, 11.5)", "", "sames");
+
 }
