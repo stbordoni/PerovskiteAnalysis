@@ -47,6 +47,7 @@ public :
    TBranch        *b_dataSamples;   //!
 
    myAna(TTree *tree=0);
+   myAna(string filename);
    virtual ~myAna();
    virtual Int_t    Cut(Long64_t entry);
    virtual Int_t    GetEntry(Long64_t entry);
@@ -60,6 +61,17 @@ public :
 #endif
 
 #ifdef myAna_cxx
+myAna::myAna(string filename) : fChain(0) 
+{
+TTree *tree; 
+TFile *f = new TFile(filename.c_str());
+  
+  f->GetObject("eventTree",tree);
+  
+  Init(tree);
+}
+
+
 myAna::myAna(TTree *tree) : fChain(0) 
 {
 // if parameter tree is not specified (or zero), connect the file
