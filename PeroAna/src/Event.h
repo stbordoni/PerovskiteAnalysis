@@ -46,6 +46,7 @@ public:
     std::vector<double> x_peak;
     std::vector<double> y_peak;
     std::vector<double> peak_integral;
+    std::vector<double> asympeak_integral;
 
     int ngoodpeaks;
 

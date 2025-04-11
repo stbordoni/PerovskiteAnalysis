@@ -4,6 +4,7 @@
 #include <vector>
 #include <TFile.h>
 #include <TTree.h>
+#include <string>
 
 // Define the structure for header information
 struct HeaderInfo {
@@ -35,7 +36,12 @@ bool readHeaderInfo(std::ifstream& fileStream, HeaderInfo& headerInfo) {
     while (std::getline(fileStream, line)) {
         //std::cout << line << std::endl;
         if (line.find("=== DATA FILE SAVED WITH SOFTWARE VERSION: V") != std::string::npos) {
-            sscanf(line.c_str(), "=== DATA FILE SAVED WITH SOFTWARE VERSION: V%s ===", &headerInfo.softwareVersion);
+	  //  sscanf(line.c_str(), "=== DATA FILE SAVED WITH SOFTWARE VERSION: V%s ===", &headerInfo.softwareVersion);
+	  size_t prefixLen = std::string("=== DATA FILE SAVED WITH SOFTWARE VERSION: V").length();
+	  size_t suffixPos = line.find(" ===", prefixLen);
+	  if (suffixPos != std::string::npos) {
+	    headerInfo.softwareVersion = line.substr(prefixLen, suffixPos - prefixLen);
+	  }
         }
         //if (line.find("=== UnixTime") != std::string::npos) {
         //    sscanf(line.c_str(), "=== UnixTime = %*f date = %*f time = %*s == TDC = %d =", &headerInfo.tdcValue);
@@ -112,14 +118,17 @@ bool readEventData(std::ifstream& fileStream, EventData& eventData) {
 
 
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
     if (argc != 3) {
         std::cerr << "Usage: " << argv[0] << " <inputfile> <outputfile>" << std::endl;
         return 1;
     }
 
-    const char* inputFileName = argv[1];
-    const char* outputFileName = argv[2];
+    //const char* inputFileName = argv[1];
+    //const char* outputFileName = argv[2];
+
+    std::string inputFileName = argv[1];
+    std::string outputFileName = argv[2];
 
     std::ifstream inputFile(inputFileName);
     if (!inputFile.is_open()) {
@@ -133,7 +142,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    TFile outputFile(outputFileName, "RECREATE");
+    TFile outputFile(outputFileName.c_str(), "RECREATE");
 
     // Create header tree and fill with header information
     TTree headerTree("headerTree", "Header Information");
@@ -177,4 +186,5 @@ int main(int argc, char* argv[]) {
     outputFile.Close();
 
     return 0;
+    
 }

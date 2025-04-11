@@ -1,5 +1,6 @@
 #include "Event.h"
 #include <iostream>
+#include <algorithm>
 
 
 
@@ -22,6 +23,9 @@ void Event::Init(){
     //std::cout<< " Initialize event " << std::endl;
     tailIntegral=0; 
     ngoodpeaks=0;
+    peak_integral.clear();
+    asympeak_integral.clear();
+
     //setEventId();
     //channelId();
 }
