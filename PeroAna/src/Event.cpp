@@ -169,3 +169,23 @@ void Event::FindMaxAmp(){
     maxAmp = *max_element(Waveform->begin(), Waveform->end());
 
 }
+
+void Event::ComputeSecPeakInterdistance(int maxpeak_x, std::vector <double> peak_x, std::vector<TH1F*> &h_tmp)
+{
+
+    if (peak_x.size()){
+    //compute first the distance between the first secondary peak and the maxAmp peak
+        double maxAmp_dist = peak_x.at(0) - maxpeak_x;
+        h_tmp[0]->Fill(maxAmp_dist);
+    
+        double tmp_dist = -999;
+
+        for (int ix=1; ix<peak_x.size(); ix++){
+            tmp_dist = peak_x.at(ix) - peak_x.at(ix-1);
+            h_tmp[ix]->Fill(tmp_dist);
+        }
+    }
+
+
+    return;
+}

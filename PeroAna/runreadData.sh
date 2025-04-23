@@ -8,13 +8,19 @@ fi
 
 # Set the input directory and output directory
 #input_dir is the path where the raw data file (from the DAQ) are stored
-#input_dir="/Users/bordonis/ResearchActivities/Perovskite/data/NewSiPM_KEPboard_DPNCboard"
-input_dir="/Users/bordonis/ResearchActivities/Perovskite/data/NewSiPM_KEPboard_DPNCboard/CsPbBr3/Cs104-A" 
-#input_dir="/Users/bordonis/ResearchActivities/Perovskite/data/NewSiPM_KEPboard_DPNCboard/MAPbBr3/SC67-B" 
-#input_dir="/Users/bordonis/ResearchActivities/Perovskite/data/NewSiPM_KEPboard_DPNCboard/CERN/MAPbBr3-SC67_B" 
-#input_dir="/eos/home-s/sbordoni/Perovskite/noiseTests/CERN/Cs104-A/"
 
 #input_dir="/Users/bordonis/ResearchActivities/Perovskite/data/PCB_box/UniGe/BulkPerovskite"
+#input_dir="/Users/bordonis/ResearchActivities/Perovskite/data/NewSiPM_KEPboard_DPNCboard"
+#input_dir="/Users/bordonis/ResearchActivities/Perovskite/data/NewSiPM_KEPboard_DPNCboard/CsPbBr3/Cs104-A" 
+#input_dir="/Users/bordonis/ResearchActivities/Perovskite/data/NewSiPM_KEPboard_DPNCboard/MAPbBr3/SC67-B" 
+#input_dir="/Users/bordonis/ResearchActivities/Perovskite/data/NewSiPM_KEPboard_DPNCboard/CERN/MAPbBr3-SC67_B" 
+input_dir="/Users/bordonis/ResearchActivities/Perovskite/data/NewSiPM_KEPboard_DPNCboard/CERN/Cs104-A"
+#input_dir="/Users/bordonis/ResearchActivities/Perovskite/data/newBox" 
+
+# directory @CERN to run on lxplus
+#input_dir="/eos/home-s/sbordoni/Perovskite/noiseTests/CERN/Cs104-A/"
+
+
 
 #rootfile_dir is the location where the rootfile built by the readData code is saved 
 #rootfile_dir="/afs/cern.ch/work/s/sbordoni/PerovskiteReD/PerovskiteAnalysis/PeroAna/rootinputfiles"

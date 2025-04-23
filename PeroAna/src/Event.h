@@ -2,6 +2,7 @@
 #define EVENT_H
 
 #include <vector>
+#include "TH1F.h"
 
 
 
@@ -33,6 +34,9 @@ public:
     void ComputeIntegral();
     double ComputeLocalIntegral(int xbin, int Irange=10 );
     void FindMaxAmp();
+    //void ComputeSecPeakInterdistance(int maxpeak_x, std::vector <double> peak_x, TH1F &h_tmp);
+    void ComputeSecPeakInterdistance(int maxpeak_x, std::vector <double> peak_x, std::vector<TH1F*> &h_tmp);
+
     //const std::vector<int>& getChannels() const;
 
 

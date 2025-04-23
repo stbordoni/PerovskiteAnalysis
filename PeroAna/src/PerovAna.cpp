@@ -112,7 +112,7 @@ int main(int argc, char *argv[]){
     
     // Find the first underscore after "Run_"
     size_t runStart = outputana_filename.find("Run_", lastSlash); // Start of "Run_"
-    size_t runEnd = outputana_filename.find("_Data_", runStart);  // End of "Run_*_Cs104-A"
+    size_t runEnd = outputana_filename.find("_Ascii_", runStart);  // End of "Run_*_Cs104-A"
 
     // Extract the substring
     if (runStart != std::string::npos && runEnd != std::string::npos) {
@@ -142,6 +142,7 @@ int main(int argc, char *argv[]){
     int distmaxAmppeaks_right;
     int distmaxAmppeaks_left;
     std::vector<double> peakInt;
+    std::vector<double> asympeakInt;
     std::vector<double> peakAmp;
 
     output_tree->Branch("baseline", &baseline);
@@ -152,6 +153,7 @@ int main(int argc, char *argv[]){
     output_tree->Branch("distmaxAmppeaks_left", &distmaxAmppeaks_left);   
      
     output_tree->Branch("peakInt", &peakInt);
+    output_tree->Branch("asympeakInt", &asympeakInt);   
     output_tree->Branch("peakAmp", &peakAmp);
     
     //output_tree->Branch("ToT", &ToT);
@@ -208,22 +210,28 @@ int main(int argc, char *argv[]){
     TH1F* h_maxAmp   = new TH1F("h_maxAmp","", 100, 10, 10);
     TH1F* h_integral = new TH1F("h_integral","", 100, 10,10);
     TH1F* h_peakInt  = new TH1F("h_peakInt", "", 100, 10,10);
+    TH1F *h_AsympeakInt = new TH1F("h_AsympeakInt", "", 100, 10,10);
     TH1F* h_tailInt  = new TH1F("h_tailInt", "", 100, 10,10);
     TH1F* h_goodpeaksperevt = new TH1F("h_goodpeaksperevt", "", 15, -0.5, 14.5);    
     //TH1F* h_distancetomaxAmppeak_left = new TH1F("h_distancetomaxAmppeak_left", "", nSamples, -500, 524 );
     //TH1F* h_distancetomaxAmppeak_right = new TH1F("h_distancetomaxAmppeak_right","", nSamples, -500, 524 );
     TH1F* h_distancetomaxAmppeak_left = new TH1F("h_distancetomaxAmppeak_left", "", nSamples, -200, 824 );
-    TH1F* h_distancetomaxAmppeak_right = new TH1F("h_distancetomaxAmppeak_right","", nSamples, -200, 824 );
+    TH1F* h_distancetomaxAmppeak_right = new TH1F("h_distancetomaxAmppeak_right","", nSamples, -200, 824 ); 
+    //TH1F* h_peakinterdistance = new TH1F("h_peakinterdistance", "", 600, 0 , 600); // I think I need more a vector of histos..    
 
 
     std::vector <TH1F*> h_position_peak;
     std::vector <TH1F*> h_distance_peak;
+    std::vector <TH1F*> h_peakinterdistance;
 
     h_position_peak.reserve(10);
     h_distance_peak.reserve(10);
+    h_peakinterdistance.reserve(10);
     for (int i = 0; i<10; i++){
         h_position_peak.emplace_back(new TH1F(Form("h_position_peak_%d", i), Form("position peak %d",i), nSamples/4, 0, 1023 ));
         h_distance_peak.emplace_back(new TH1F(Form("h_distance_peak_%d", i), Form("distance peak %d",i), nSamples/4, -500, 524 ));
+        h_peakinterdistance.emplace_back(new TH1F(Form("h_peakinterdistance_%d", i), "Distance between secondary peaks", 150, 0 , 600 ));
+            
     }
 
     TH1F* h_waveform = new TH1F("h_waveform","raw waveform", nSamples,0,1023);
@@ -232,6 +240,8 @@ int main(int argc, char *argv[]){
     h_AvgMeanwaveform->SetLineColor(1);
     h_AvgMeanwaveform->SetLineWidth(3);
     TH1F* h_tailIntegral = new TH1F("h_tailIntegral","", nSamples,0,1023);
+    TH1F* h_AsymLocalIntegral = new TH1F("h_AsymLocalIntegral","", nSamples,0,1023);
+ 
 
     TH1F* h_peakAmp   = new TH1F("h_peakAmp","", 100, 10, 10);
     TH2F* h_peakAmp_vs_peakI = new TH2F("h_peakAmp_vs_peakI","" ,100, 10, 10, 100, 10,10);
@@ -264,6 +274,7 @@ int main(int argc, char *argv[]){
         h_AvgMeanwaveform->Reset();
         h_waveforminTime->Reset();
         h_tailIntegral->Reset();
+        h_AsymLocalIntegral->Reset();
 
         eventTree->GetEntry(ievt);
         if (ievt>0)
@@ -361,6 +372,7 @@ int main(int argc, char *argv[]){
                     myevent.x_peak.push_back(xp);
                     myevent.y_peak.push_back(yp);
                     if (verbose) std::cout << " found a good peak  x: " << xp << " ; y: " << yp << std::endl;
+                    //std::cout << " found a good peak  x: " << xp << " ; y: " << yp << std::endl;
 
                     // compute integral around the peak
                     double localI=0;
@@ -369,7 +381,33 @@ int main(int argc, char *argv[]){
                     h_peakInt->Fill(localI);
                     h_peakAmp->Fill(yp);
                     h_peakAmp_vs_peakI->Fill(yp, localI); 
-                  
+
+                    //compute asymmetrical local integral
+                    int range_low = 15;
+                    int range_up = 30;
+                    int lowedge_asymInt=0; 
+                    int upedge_asymInt = 0;
+                    double asymlocalI=0;
+
+                    if (bin - range_low >= 0)
+                        lowedge_asymInt = bin - range_low;
+                    else 
+                       lowedge_asymInt = 0;
+
+                    if (bin + range_up <1023)
+                        upedge_asymInt = bin + range_up;
+                    else 
+                        upedge_asymInt = 1023;
+
+                    //std::cout << " \t \t low edge: " << lowedge_asymInt << " \t ; upedge:  " << upedge_asymInt << std::endl;
+
+                    for (int isample=lowedge_asymInt; isample<upedge_asymInt; isample++){
+                        h_AsymLocalIntegral->SetBinContent(isample,myevent.GetAvgMeanWaveform()->at(isample)); // to draw the waveform and check the edges in use
+                        asymlocalI+=myevent.avgWaveform->at(isample);
+                        h_AsympeakInt->Fill(asymlocalI); //to record the computed integral
+                    }
+                    myevent.asympeak_integral.push_back(asymlocalI);
+
                 }
             }
 
@@ -385,13 +423,15 @@ int main(int argc, char *argv[]){
                 if (verbose) 
                     std::cout << "maxElementIndex:" << maxElementIndex << ", maxElement:" << maxElement << '\n';
 
-                std::vector <double> x_peak_right;                    
+                std::vector <double> x_peak_right;    
+                std::vector <double> x_peak_left;                    
                 int countpeaks_right=0;
                 int countpeaks_left=0;
                 for (auto ix: myevent.x_peak ){
                     if (ix < myevent.x_peak.at(maxElementIndex) ){
                         h_count_peaks_entries->Fill(1); //if peak is on the left of the max peak
                         countpeaks_left++;
+                        x_peak_left.push_back(ix);
                         h_distancetomaxAmppeak_left->Fill(ix-myevent.x_peak.at(maxElementIndex));  //the histo should give only negative numbers
                         distmaxAmppeaks_left = ix-myevent.x_peak.at(maxElementIndex);
                         //std::cout<< " left peak - distance: " << ix-myevent.x_peak.at(maxElementIndex)<< std::endl;
@@ -400,9 +440,10 @@ int main(int argc, char *argv[]){
                     else if (ix > myevent.x_peak.at(maxElementIndex) ){
                         h_count_peaks_entries->Fill(2);  //if peak is on the right of the max peak
                         countpeaks_right++;
+                        x_peak_right.push_back(ix);
                         h_distancetomaxAmppeak_right->Fill(ix-myevent.x_peak.at(maxElementIndex));//the histo should give only positive numbers
                         distmaxAmppeaks_right = ix-myevent.x_peak.at(maxElementIndex); 
-                        if (countpeaks_right < 10){
+                        if (countpeaks_right < 5){
                             h_position_peak.at(countpeaks_right)->Fill(ix);
                             h_distance_peak.at(countpeaks_right)->Fill(ix-myevent.x_peak.at(maxElementIndex));
                         }
@@ -428,7 +469,10 @@ int main(int argc, char *argv[]){
                     }
                     //countpeaks_right++;
                 }
+                
 
+                //myevent.ComputeSecPeakInterdistance(myevent.x_peak.at(maxElementIndex),x_peak_right, *h_peakinterdistance ); // with one only histo
+                myevent.ComputeSecPeakInterdistance(myevent.x_peak.at(maxElementIndex),x_peak_right, h_peakinterdistance ); // with array of histos
                 h_tailInt->Fill(myevent.tailIntegral);
                 //tailInt=tailIntegral; 
             }                
@@ -505,6 +549,11 @@ int main(int argc, char *argv[]){
                 h_tailIntegral->SetFillColor(kRed);
                 h_tailIntegral->Draw("same");
 
+                h_AsymLocalIntegral->SetLineColor(kGreen);
+                h_AsymLocalIntegral->SetFillStyle(3018);
+                h_AsymLocalIntegral->SetFillColor(kGreen);
+                h_AsymLocalIntegral->Draw("same");
+
                 TLine *l_baseline = new TLine(0, myevent.baseline, 1023, myevent.baseline);
                 l_baseline->SetLineColor(kBlue);
                 l_baseline->SetLineStyle(9);
@@ -568,6 +617,7 @@ int main(int argc, char *argv[]){
     npeaks=myevent.ngoodpeaks;
     peakAmp=myevent.y_peak;
     peakInt=myevent.peak_integral;
+    asympeakInt=myevent.asympeak_integral;
     tailInt=myevent.tailIntegral;
     
     output_tree->Fill();
@@ -590,6 +640,10 @@ int main(int argc, char *argv[]){
     h_integral->Draw();
     c1->cd(4);
     h_peakInt->Draw();
+    h_AsympeakInt->SetLineColor(kOrange);
+    h_AsympeakInt->SetLineWidth(2);
+    h_AsympeakInt->Draw("");
+    h_peakInt->Draw("same");
     c1->cd(5);
     h_goodpeaksperevt->Draw();
     c1->cd(6);
@@ -608,7 +662,7 @@ int main(int argc, char *argv[]){
 
     c2->SaveAs(plotspath+Runname+"_noisefreq.pdf");
     
-    TCanvas* c3 = new TCanvas("c3", "c3", 1500, 500);
+    TCanvas* c3 = new TCanvas("c3", "c3", 2000, 500);
     c3->Divide(3,1);
     c3->cd(1);
     h_count_peaks_entries->Draw();
@@ -623,19 +677,26 @@ int main(int argc, char *argv[]){
     h_distancetomaxAmppeak_left->Draw("same");
     c3->SaveAs(plotspath+Runname+"_secondarypeaks_2mVthr.pdf");
     
+    
 
     TCanvas* c4 = new TCanvas("c4", "c4", 1500, 500);
     c4->Divide(2,1);
     
+    TCanvas* c5 = new TCanvas("c5", "c5", 700, 500);
     std::vector <Color_t> color = {kBlack, kRed, kOrange, kOrange-3, kOrange-9};
 
     TLegend *leg_peaks = new TLegend(0.1,0.7,0.48,0.9);
+    TLegend *leg_iterpeaks = new TLegend(0.1,0.7,0.48,0.9);
     
     //for (int i=0; i<h_position_peak.size(); i++){
     for (int i=0; i<5; i++){
+        h_peakinterdistance.at(i)->SetLineColor(color.at(i));
         h_position_peak.at(i)->SetLineColor(color.at(i));
         h_distance_peak.at(i)->SetLineColor(color.at(i));
         if (i>0) {
+            c5->cd();
+            h_peakinterdistance.at(i)->Draw("same");
+            leg_iterpeaks->AddEntry(h_peakinterdistance.at(i), Form("distance between %d and %d peaks",i+1, i), "l");
             c4->cd(1);
             h_position_peak.at(i)->Draw("same");
             leg_peaks->AddEntry(h_position_peak.at(i), Form("position of %d secondary peak",i), "l");
@@ -643,10 +704,13 @@ int main(int argc, char *argv[]){
             h_distance_peak.at(i)->Draw("same");
         }
         else {
+            c5->cd();
+            h_peakinterdistance.at(i)->Draw();
+            leg_iterpeaks->AddEntry(h_peakinterdistance.at(i), Form("distance between %d and the main peak",i+1), "l");
             c4->cd(1);
             gPad->SetLogy();
             h_position_peak.at(i)->Draw();
-            leg_peaks->AddEntry("h_position_peak.at(i)", "Position of main peak", "l");
+            leg_peaks->AddEntry(h_position_peak.at(i), "Position of main peak", "l");
             c4->cd(2);
             gPad->SetLogy();
             h_distance_peak.at(i)->Draw();
@@ -656,6 +720,9 @@ int main(int argc, char *argv[]){
     leg_peaks->Draw("same");
 
     c4->SaveAs(plotspath+Runname+"_secondarypeaks_distance_2mVthr.pdf");
+
+    c5->cd();
+    leg_iterpeaks->Draw("same");
 
     //before closing produce an output tree
     FileOutput->cd();
