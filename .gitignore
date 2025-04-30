@@ -33,6 +33,7 @@
 *.png
 *.pdf
 
+*.*~
 
 build/
 rootinputfiles/
