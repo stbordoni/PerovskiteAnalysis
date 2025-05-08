@@ -34,11 +34,14 @@
 #include "G4SteppingVerbose.hh"
 #include "G4UImanager.hh"
 #include "QBBC.hh"
+#include "FTFP_BERT.hh" //NEW//
 
 #include "G4VisExecutive.hh"
 #include "G4UIExecutive.hh"
 
 #include "Randomize.hh"
+
+#include "G4PhysListFactory.hh" ///NEW///
 
 using namespace G4PerovSim;
 
@@ -69,7 +72,7 @@ int main(int argc,char** argv)
   runManager->SetUserInitialization(new DetectorConstruction());
 
   // Physics list
-  G4VModularPhysicsList* physicsList = new QBBC;
+  G4VModularPhysicsList* physicsList = new FTFP_BERT; //was QBBC
   physicsList->SetVerboseLevel(1);
   runManager->SetUserInitialization(physicsList);
 

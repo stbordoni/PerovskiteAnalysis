@@ -33,6 +33,9 @@
 #include "G4Event.hh"
 #include "G4RunManager.hh"
 
+#include "G4AnalysisManager.hh"
+
+
 namespace G4PerovSim
 {
 
@@ -41,6 +44,12 @@ namespace G4PerovSim
 EventAction::EventAction(RunAction* runAction)
 : fRunAction(runAction)
 {}
+
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
+
+//void EventAction::AddEdep(G4double edep) {
+//  fEdep += edep;
+//}
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 
@@ -55,6 +64,12 @@ void EventAction::EndOfEventAction(const G4Event*)
 {
   // accumulate statistics in run action
   fRunAction->AddEdep(fEdep);
+
+  auto analysisManager = G4AnalysisManager::Instance();
+  analysisManager->FillH1(0, fEdep); // 0 = histogram ID
+  
+  G4cout << "Total energy deposited in event: " << fEdep / CLHEP::keV << " keV" << G4endl; //Debug Check//
+
 }
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......

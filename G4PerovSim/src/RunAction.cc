@@ -40,6 +40,9 @@
 #include "G4UnitsTable.hh"
 #include "G4SystemOfUnits.hh"
 
+#include "G4AnalysisManager.hh" //NEW//
+
+
 namespace G4PerovSim
 {
 
@@ -63,6 +66,15 @@ RunAction::RunAction()
   G4AccumulableManager* accumulableManager = G4AccumulableManager::Instance();
   accumulableManager->RegisterAccumulable(fEdep);
   accumulableManager->RegisterAccumulable(fEdep2);
+
+  // Create analysis manager
+  auto analysisManager = G4AnalysisManager::Instance();
+  analysisManager->SetVerboseLevel(1);
+  analysisManager->SetFirstHistoId(0);
+
+  // Create 1D histogram for energy deposition
+  analysisManager->CreateH1("Edep", "Energy Deposited in Scoring Volume", 10, 0., 10. * MeV);
+
 }
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
@@ -75,6 +87,10 @@ void RunAction::BeginOfRunAction(const G4Run*)
   // reset accumulables to their initial values
   G4AccumulableManager* accumulableManager = G4AccumulableManager::Instance();
   accumulableManager->Reset();
+
+  // Open output file
+  auto analysisManager = G4AnalysisManager::Instance();
+  analysisManager->OpenFile("output.root");
 
 }
 
@@ -117,6 +133,10 @@ void RunAction::EndOfRunAction(const G4Run* run)
     G4double particleEnergy = particleGun->GetParticleEnergy();
     runCondition += G4BestUnit(particleEnergy,"Energy");
   }
+
+  auto analysisManager = G4AnalysisManager::Instance();
+  analysisManager->Write();
+  analysisManager->CloseFile();
 
   // Print
   //

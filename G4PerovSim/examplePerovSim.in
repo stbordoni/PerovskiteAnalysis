@@ -1,4 +1,4 @@
-# Macro file for example B1 test
+# Macro file for PerovSim test
 
 /run/initialize
 
@@ -9,3 +9,4 @@
 /run/printProgress 100
 /run/beamOn 1000
 #
+

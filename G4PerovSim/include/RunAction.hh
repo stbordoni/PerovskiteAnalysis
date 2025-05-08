@@ -34,6 +34,8 @@
 #include "G4Accumulable.hh"
 #include "globals.hh"
 
+#include "G4AnalysisManager.hh" //NEW//
+
 class G4Run;
 
 /// Run action class

@@ -40,6 +40,8 @@
 #include "G4PVPlacement.hh"
 #include "G4SystemOfUnits.hh"
 
+#include "G4UserLimits.hh"
+
 namespace G4PerovSim
 {
 
@@ -52,7 +54,7 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
 
   // Envelope parameters
   //
-  G4double env_sizeXY = 40*cm, env_sizeZ = 40*cm;
+  G4double env_sizeXY = 10*cm, env_sizeZ = 10*cm; //was 40x40x40
   G4Material* env_mat = nist->FindOrBuildMaterial("G4_AIR");
 
   // Option to switch on/off checking of volumes overlaps
@@ -148,7 +150,7 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
 
   // Conical section shape
   G4double crystal_x =  6.03*mm, shape1_rmaxa = 2.*cm;
-  G4double crystal_y =  2.72*mm, shape1_rmaxb = 4.*cm;
+  G4double crystal_y =  5*mm, shape1_rmaxb = 4.*cm; //was 2.72mm, now 5mm
   G4double crystal_z =  6.02*mm;
 
   auto solidcrystal = new G4Box("Crystal",                           // its name
@@ -168,10 +170,13 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
     0,                        // copy number
     checkOverlaps);           // overlaps checking
 
+  // After defining your logical volume for the crystal:
+  G4double maxStep = 0.1 * mm;  // or even smaller
+  logiccrystal->SetUserLimits(new G4UserLimits(maxStep));
 
   // Set Shape1 as scoring volume  // is the envelope necessary? the scoring volume can be the world? 
   //
-  fScoringVolume = logicEnv;
+  fScoringVolume = logiccrystal; //changed logicEnv to logiccrystal *****//
 
   //
   //always return the physical World
