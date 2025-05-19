@@ -1,0 +1,12 @@
+# Macro file for PerovSim test
+
+/run/initialize
+
+# gamma 6 MeV 
+/gun/particle gamma
+/gun/energy 6 MeV
+#
+/run/printProgress 100
+/run/beamOn 1000
+#
+
