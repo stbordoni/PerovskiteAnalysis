@@ -179,13 +179,16 @@ void Event::ComputeSecPeakInterdistance(int maxpeak_x, std::vector <double> peak
         h_tmp[0]->Fill(maxAmp_dist);
     
         double tmp_dist = -999;
+        int maxNpeaks = peak_x.size();
 
-        for (int ix=1; ix<peak_x.size(); ix++){
+        if (maxNpeaks >10)
+            maxNpeaks = 10; // limit the number of peaks to be considered to limit the size of the array of histogram.
+
+        for (int ix=1; ix<maxNpeaks; ix++){
             tmp_dist = peak_x.at(ix) - peak_x.at(ix-1);
             h_tmp[ix]->Fill(tmp_dist);
         }
     }
-
 
     return;
 }

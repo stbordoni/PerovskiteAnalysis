@@ -81,7 +81,7 @@ int main(int argc, char *argv[]){
         std::cout << "display waveform is active. Waveform will be displayed one by one  " << displaywave << std::endl;
     
 
-    
+    double SPE_INTEGRAL = 0.09636; // in V (estimated from run6 SiPM only )
     
     //////////////////////////////////////////////////////////////
     // ROOT app and objects to read the data in the Run
@@ -139,6 +139,7 @@ int main(int argc, char *argv[]){
     double pulseInt;
     double tailInt;
     int npeaks;
+    int npeaks_specut;
     int distmaxAmppeaks_right;
     int distmaxAmppeaks_left;
     std::vector<double> peakInt;
@@ -149,6 +150,7 @@ int main(int argc, char *argv[]){
     output_tree->Branch("pulseInt", &pulseInt);   
     output_tree->Branch("tailInt", &tailInt);   
     output_tree->Branch("npeaks", &npeaks);   
+    output_tree->Branch("npeaks_specut", &npeaks_specut);   
     output_tree->Branch("distmaxAmppeaks_right", &distmaxAmppeaks_right);  
     output_tree->Branch("distmaxAmppeaks_left", &distmaxAmppeaks_left);   
      
@@ -212,13 +214,16 @@ int main(int argc, char *argv[]){
     TH1F* h_peakInt  = new TH1F("h_peakInt", "", 100, 10,10);
     TH1F *h_AsympeakInt = new TH1F("h_AsympeakInt", "", 100, 10,10);
     TH1F* h_tailInt  = new TH1F("h_tailInt", "", 100, 10,10);
-    TH1F* h_goodpeaksperevt = new TH1F("h_goodpeaksperevt", "", 15, -0.5, 14.5);    
+    TH1F* h_goodpeaksperevt = new TH1F("h_goodpeaksperevt", "", 15, -0.5, 14.5);   
+    TH1F* h_goodpeaksperevt_specut = new TH1F("h_goodpeaksperevt_specut", "", 15, -0.5, 14.5);    
     //TH1F* h_distancetomaxAmppeak_left = new TH1F("h_distancetomaxAmppeak_left", "", nSamples, -500, 524 );
     //TH1F* h_distancetomaxAmppeak_right = new TH1F("h_distancetomaxAmppeak_right","", nSamples, -500, 524 );
     TH1F* h_distancetomaxAmppeak_left = new TH1F("h_distancetomaxAmppeak_left", "", nSamples, -200, 824 );
     TH1F* h_distancetomaxAmppeak_right = new TH1F("h_distancetomaxAmppeak_right","", nSamples, -200, 824 ); 
     //TH1F* h_peakinterdistance = new TH1F("h_peakinterdistance", "", 600, 0 , 600); // I think I need more a vector of histos..    
 
+    TH1F *h_nphotons_tailInt = new TH1F("h_nphotons_tailInt", "nphotons tail integral", 50, -0.5, 49.5);
+    TH1F *h_nphotons_asympeak = new TH1F("h_nphotons_asympeak", "nphotons asym peak integral", 50, -0.5, 49.5);
 
     std::vector <TH1F*> h_position_peak;
     std::vector <TH1F*> h_distance_peak;
@@ -263,7 +268,7 @@ int main(int argc, char *argv[]){
     std::cout << "entries " << nEntries << std::endl;
 
     
-    //for (Long64_t ievt = 2350; ievt < nEntries-1; ievt++) {
+    //for (Long64_t ievt = 1000; ievt < nEntries-1; ievt++) {
     for (Long64_t ievt = 0; ievt < nEntries-1; ievt++) {
         //std::cout << "====== EVENT " << ievt+1 << "======" << std::endl;
 
@@ -315,9 +320,7 @@ int main(int argc, char *argv[]){
             h_integral->Fill(myevent.integral);
 
             
-            
-
-
+    
             //ToDO: if it is possible to use TSpectrum over the array of values and not the histo 
             //then remove all this histo part to the displaywave block
             for(int isample=0; isample<nSamples; isample++){
@@ -334,6 +337,7 @@ int main(int argc, char *argv[]){
                 }
             }
 
+           
 
             
             //search for peaks in the waveform 
@@ -341,11 +345,12 @@ int main(int argc, char *argv[]){
             Int_t npeaks = TMath::Abs(np);
 
             myevent.ngoodpeaks =0;
+            myevent.ngoodpeaks_specut =0;
 
             // set value to define a good peak
 
-            double peak_thsld = 0.002; // hard cut on the assumed value of a single p.e of ~3mV
-            //  double peak_thsld = 5*fabs(myevent.baseline);
+            //double peak_thsld = 0.002; // hard cut on the assumed value of a single p.e of ~3mV
+              double peak_thsld = 5*fabs(myevent.baseline);
 
 
             // Use TSpectrum to find the peak candidates
@@ -384,7 +389,7 @@ int main(int argc, char *argv[]){
 
                     //compute asymmetrical local integral
                     int range_low = 15;
-                    int range_up = 30;
+                    int range_up = 40;
                     int lowedge_asymInt=0; 
                     int upedge_asymInt = 0;
                     double asymlocalI=0;
@@ -408,10 +413,13 @@ int main(int argc, char *argv[]){
                     }
                     myevent.asympeak_integral.push_back(asymlocalI);
 
+                    if (asymlocalI > SPE_INTEGRAL)
+                      myevent.ngoodpeaks_specut++;       
+
                 }
             }
 
-            
+ 
             if (verbose) 
             std::cout << "found " << myevent.ngoodpeaks << " good peaks (i.e. x3*baseline) with baseline =" << myevent.baseline << std::endl;
             
@@ -458,28 +466,55 @@ int main(int argc, char *argv[]){
                         h_distance_peak.at(0)->Fill(ix-myevent.x_peak.at(maxElementIndex));
 
                         // compute waveform integral starting from the max peak to the end of the waveform
-                        for (int isample = ix -25; isample < myevent.GetAvgMeanWaveform()->size(); isample++) {
+                        int startI = 0;
+                        if ((ix-25) > 0)
+                            startI = ix-25;
+                        else
+                            startI = 0;
+
+                        for (int isample = startI; isample < myevent.GetAvgMeanWaveform()->size(); isample++) {
                             //tailIntegral += myevent.GetAvgMeanWaveform()->at(isample);
                             myevent.tailIntegral += myevent.GetAvgMeanWaveform()->at(isample);
                             h_tailIntegral->SetBinContent(isample,myevent.GetAvgMeanWaveform()->at(isample));
                         }
 
-                        for (int isample = 0; isample < ix -25; isample++)
+                        for (int isample = 0; isample < startI; isample++)
                             h_tailIntegral->SetBinContent(isample,0);
+                        
+                        
                     }
                     //countpeaks_right++;
                 }
                 
 
                 //myevent.ComputeSecPeakInterdistance(myevent.x_peak.at(maxElementIndex),x_peak_right, *h_peakinterdistance ); // with one only histo
+
                 myevent.ComputeSecPeakInterdistance(myevent.x_peak.at(maxElementIndex),x_peak_right, h_peakinterdistance ); // with array of histos
                 h_tailInt->Fill(myevent.tailIntegral);
                 //tailInt=tailIntegral; 
             }                
 
+          
+
             h_goodpeaksperevt->Fill(myevent.ngoodpeaks);
+            h_goodpeaksperevt_specut->Fill(myevent.ngoodpeaks_specut);
+            
+            if (myevent.ngoodpeaks != myevent.asympeak_integral.size()){
+                std::cout << "Error: number of peaks found " << myevent.ngoodpeaks << " is different from the number of asym peak integrals " << myevent.asympeak_integral.size() << std::endl;
+                continue;
+            }
             
             
+
+            for (int i=0; i<myevent.asympeak_integral.size(); i++){
+                h_nphotons_asympeak->Fill(myevent.asympeak_integral.at(i)/SPE_INTEGRAL);
+            }
+            
+            h_nphotons_tailInt->Fill(myevent.tailIntegral/SPE_INTEGRAL);
+
+
+
+
             //noise study
            
             h_1dMagRaw = h_waveforminTime->FFT(h_1dMagRaw, "MAG R2C M"); // this has units of 1/f_max
@@ -520,7 +555,10 @@ int main(int argc, char *argv[]){
                 Double_t *xp = new Double_t[50];
                 Double_t *yp = new Double_t[50]; 
 
-            
+                if (myevent.ngoodpeaks == 0){
+                    std::cout << "No good peaks found in this event " << std::endl;
+                    continue;
+                }
                 //for (int ip=0; ip<nfound;ip++) {
                 for (int ip=0; ip<myevent.ngoodpeaks;ip++) {
                     xp[ip] = myevent.x_peak[ip];
@@ -611,10 +649,12 @@ int main(int argc, char *argv[]){
             */
         }   
 
-    
+   
+
     baseline=myevent.baseline;
     pulseInt=myevent.integral;
     npeaks=myevent.ngoodpeaks;
+    npeaks_specut=myevent.ngoodpeaks_specut;
     peakAmp=myevent.y_peak;
     peakInt=myevent.peak_integral;
     asympeakInt=myevent.asympeak_integral;
@@ -646,12 +686,16 @@ int main(int argc, char *argv[]){
     h_peakInt->Draw("same");
     c1->cd(5);
     h_goodpeaksperevt->Draw();
+    h_goodpeaksperevt_specut->SetLineColor(kRed);
+    h_goodpeaksperevt_specut->Draw("same");
+
     c1->cd(6);
     h_peakAmp_vs_peakI->GetXaxis()->SetTitle("peak Amplitude [V]");
     h_peakAmp_vs_peakI->GetYaxis()->SetTitle("peak Integral [V]");
     h_peakAmp_vs_peakI->Draw("COLZ");
 
-    c1->SaveAs(plotspath+Runname+"_spectra_2mVthr.pdf");
+    //c1->SaveAs(plotspath+Runname+"_spectra_2mVthr.pdf");
+    c1->SaveAs(plotspath+Runname+"_spectra_5sigmathr.pdf");
 
     TCanvas* c2 = new TCanvas("c2", "c2", 1000, 700);
     c2->cd();
@@ -660,7 +704,7 @@ int main(int argc, char *argv[]){
     // Close the file
     //file->Close();
 
-    c2->SaveAs(plotspath+Runname+"_noisefreq.pdf");
+    c2->SaveAs(plotspath+Runname+"_noisefreq_5sigmathr.pdf");
     
     TCanvas* c3 = new TCanvas("c3", "c3", 2000, 500);
     c3->Divide(3,1);
@@ -675,7 +719,8 @@ int main(int argc, char *argv[]){
     h_distancetomaxAmppeak_right->Draw();
     h_distancetomaxAmppeak_left->SetLineColor(kBlue);
     h_distancetomaxAmppeak_left->Draw("same");
-    c3->SaveAs(plotspath+Runname+"_secondarypeaks_2mVthr.pdf");
+    //c3->SaveAs(plotspath+Runname+"_secondarypeaks_2mVthr.pdf");
+    c3->SaveAs(plotspath+Runname+"_secondarypeaks_5sigmathr.pdf");
     
     
 
@@ -719,10 +764,19 @@ int main(int argc, char *argv[]){
     c4->cd(1);
     leg_peaks->Draw("same");
 
-    c4->SaveAs(plotspath+Runname+"_secondarypeaks_distance_2mVthr.pdf");
+    //c4->SaveAs(plotspath+Runname+"_secondarypeaks_distance_2mVthr.pdf");
+    c4->SaveAs(plotspath+Runname+"_secondarypeaks_distance_5sigmathr.pdf");
 
     c5->cd();
     leg_iterpeaks->Draw("same");
+
+    
+    TCanvas* c6 = new TCanvas("c6", "c6", 1000, 500);
+    c6->Divide(2,1);
+    c6->cd(1);
+    h_nphotons_tailInt->Draw();
+    c6->cd(2);
+    h_nphotons_asympeak->Draw();
 
     //before closing produce an output tree
     FileOutput->cd();

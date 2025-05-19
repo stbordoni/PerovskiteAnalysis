@@ -14,8 +14,9 @@ fi
 #input_dir="/Users/bordonis/ResearchActivities/Perovskite/data/NewSiPM_KEPboard_DPNCboard/CsPbBr3/Cs104-A" 
 #input_dir="/Users/bordonis/ResearchActivities/Perovskite/data/NewSiPM_KEPboard_DPNCboard/MAPbBr3/SC67-B" 
 #input_dir="/Users/bordonis/ResearchActivities/Perovskite/data/NewSiPM_KEPboard_DPNCboard/CERN/MAPbBr3-SC67_B" 
-input_dir="/Users/bordonis/ResearchActivities/Perovskite/data/NewSiPM_KEPboard_DPNCboard/CERN/Cs104-A"
-#input_dir="/Users/bordonis/ResearchActivities/Perovskite/data/newBox" 
+#input_dir="/Users/bordonis/ResearchActivities/Perovskite/data/NewSiPM_KEPboard_DPNCboard/CERN/Cs104-A"
+#input_dir="/Users/bordonis/ResearchActivities/Perovskite/data/NewSiPM_KEPboard_DPNCboard/CERN/SiPM_x"
+input_dir="/Users/bordonis/ResearchActivities/Perovskite/data/newBox" 
 
 # directory @CERN to run on lxplus
 #input_dir="/eos/home-s/sbordoni/Perovskite/noiseTests/CERN/Cs104-A/"
@@ -115,6 +116,7 @@ if [ $? -eq 0 ]; then
     
     #here are analysis options
     display_waveforms=false
+    
 
 
     # Run the analysis

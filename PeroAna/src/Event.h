@@ -53,6 +53,7 @@ public:
     std::vector<double> asympeak_integral;
 
     int ngoodpeaks;
+    int ngoodpeaks_specut;
 
     std::vector<double>* Waveform;
     std::vector<double>* avgWaveform;
