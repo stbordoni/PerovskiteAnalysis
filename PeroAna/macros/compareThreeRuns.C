@@ -52,7 +52,7 @@ void compareThreeRuns(TString f_1 ="run1",
     if (! f_3.IsNull()) {     
         tree3 = GetTree(f_3);
         tree3->Print();
-        tree3->SetLineColor(kGray);
+        tree3->SetLineColor(kGreen+2);
         tree3->SetLineWidth(3);
         tree3_ok = true;
     }
@@ -60,11 +60,12 @@ void compareThreeRuns(TString f_1 ="run1",
 
     TCanvas *c0 = new TCanvas("c0", "peak Amplitudes", 800, 600);
     c0->cd();
-    if (tree1_ok) tree1->Draw("peakAmp>>htemp1(100, 0, 0.02)");     
+    gStyle->SetOptStat(0);
+    if (tree1_ok) tree1->Draw("peakAmp>>htemp1(100, 0, 0.05)");     
     //htemp1->GetXaxis()->SetTitle("[V]");
     //htemp1->GetYaxis()->SetTitle("counts");
-     if (tree2_ok) tree2->Draw("peakAmp>>htemp2(100, 0, 0.02)", "", "sames");
-     if (tree3_ok) tree3->Draw("peakAmp>>htemp3(100, 0, 0.02)", "", "sames");
+     if (tree2_ok) tree2->Draw("peakAmp>>htemp2(100, 0, 0.05)", "", "sames");
+     if (tree3_ok) tree3->Draw("peakAmp>>htemp3(100, 0, 0.05)", "", "sames");
 
     
     if (tree1_ok) leg->AddEntry("htemp1", label1);
@@ -76,21 +77,21 @@ void compareThreeRuns(TString f_1 ="run1",
 
     TCanvas *c1 = new TCanvas("c1", "Local integral", 800, 600);
     c1->cd();
-    if (tree1_ok) tree1->Draw("peakInt>>htemp1int(100, 0, 0.1)");     
+    if (tree1_ok) tree1->Draw("peakInt>>htemp1int(100, 0, 0.5)");     
     //htemp1->GetXaxis()->SetTitle("[V]");
     //htemp1->GetYaxis()->SetTitle("counts");
-    if (tree2_ok) tree2->Draw("peakInt>>htemp2int(100, 0, 0.1)", "", "sames");
-    if (tree3_ok) tree3->Draw("peakInt>>htemp3int(100, 0, 0.1)", "", "sames");
+    if (tree2_ok) tree2->Draw("peakInt>>htemp2int(100, 0, 0.5)", "", "sames");
+    if (tree3_ok) tree3->Draw("peakInt>>htemp3int(100, 0, 0.5)", "", "sames");
     leg->Draw("same");
 
     TCanvas *c2 = new TCanvas("c2", " ", 1600, 600);
     c2->Divide(2,1);
     c2->cd(1);
-    if (tree1_ok) tree1->Draw("tailInt>>htemp1tail(100, 0, 2)");     
+    if (tree1_ok) tree1->Draw("tailInt>>htemp1tail(100, 0, 10)");     
     //htemp1->GetXaxis()->SetTitle("[V]");
     //htemp1->GetYaxis()->SetTitle("counts");
-    if (tree2_ok) tree2->Draw("tailInt>>htemp2tail(100, 0, 2)", "", "sames");
-    if (tree3_ok) tree3->Draw("tailInt>>htemp3tail(100, 0, 2)", "", "sames");
+    if (tree2_ok) tree2->Draw("tailInt>>htemp2tail(100, 0, 10)", "", "sames");
+    if (tree3_ok) tree3->Draw("tailInt>>htemp3tail(100, 0, 10)", "", "sames");
     leg->Draw("same");
     
     c2->cd(2);
@@ -99,5 +100,39 @@ void compareThreeRuns(TString f_1 ="run1",
     //htemp1->GetYaxis()->SetTitle("counts");
     if (tree2_ok) tree2->Draw("npeaks>>htemp2npeaks(12, -0.5, 11.5)", "", "sames");
     if (tree3_ok) tree3->Draw("npeaks>>htemp3npeaks(12, -0.5, 11.5)", "", "sames");
+
+    TCanvas *c3 = new TCanvas("c3", "Baseline", 800, 600);
+    c3->cd();
+    if (tree1_ok) tree1->Draw("baseline>>htemp1baseline(250, 10, 10)");     
+    //htemp1->GetXaxis()->SetTitle("[V]");
+    //htemp1->GetYaxis()->SetTitle("counts");
+    if (tree2_ok) tree2->Draw("baseline>>htemp2baseline(250, 10, 10)", "", "sames");
+    if (tree3_ok) tree3->Draw("baseline>>htemp3baseline250, 10, 10)", "", "sames");
+    leg->Draw("same");
+
+
+    TCanvas *c4 = new TCanvas("c4", " ", 1600, 600);
+    c4->Divide(2,1);
+    c4->cd(1);
+    if (tree1_ok){
+        TH2F* htemp1tailnPeaks = (TH2F*)tree1->Draw("tailInt:npeaks>>htemp1tailnPeaks(14, 0, 14, 5.q0, -1, 10)", "", "COLZ");
+    //hist2d->Draw("COLZ");
+        //if (tree1_ok) tree1->Draw("tailInt:npeaks", "", "COLZ");     
+        //htemp1tailnPeaks->GetXaxis()->SetTitle("N peaks");
+        //htemp1tailnPeaks->GetYaxis()->SetTitle("tail integral [V]");
+    }
+        //if (tree3_ok) tree3->Draw("tailInt:npeaks>>htemp3tailnPeaks(100, 0, 10, 12, -0.5, 11.5)", "", "sames");
+    //leg->Draw("same");
+    
+    c4->cd(2);
+    if (tree2_ok){
+    TH2F* htemp2tailnPeaks = (TH2F*)tree2->Draw("tailInt:npeaks>>htemp2tailnPeaks( 14, 0, 14, 50, -1, 10)", "", "COLZ");
+    //if (tree2_ok) tree2->Draw("(tailInt:npeaks)>>htemp2tailnPeaks(100, 0, 10, 12, -0.5, 11.5)", "", "");
+    
+    //if (tree2_ok) tree2->Draw("tailInt:npeaks", "", "COLZ");
+    //htemp2tailnPeaks->GetXaxis()->SetTitle("N peaks");
+    //htemp2tailnPeaks->GetYaxis()->SetTitle("tail integral [V]");
+    }
+    
 
 }
