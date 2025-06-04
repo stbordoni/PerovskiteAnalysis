@@ -73,8 +73,9 @@ RunAction::RunAction()
   analysisManager->SetFirstHistoId(0);
 
   // Create 1D histogram for energy deposition
-  analysisManager->CreateH1("Edep", "Energy Deposited in Scoring Volume", 10, 0., 10. * MeV);
-
+  analysisManager->CreateH1("Edep", "Energy Deposited in Scoring Volume by 1MeV Gamma", 45, 0., 1.5 * MeV);
+  analysisManager->SetH1XAxisTitle(0, "Energy Deposited (MeV)");
+  analysisManager->SetH1YAxisTitle(0, "Entries");
 }
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
@@ -91,6 +92,15 @@ void RunAction::BeginOfRunAction(const G4Run*)
   // Open output file
   auto analysisManager = G4AnalysisManager::Instance();
   analysisManager->OpenFile("output.root");
+
+  //auto generator = static_cast<const PrimaryGeneratorAction*>(
+    //G4RunManager::GetRunManager()->GetUserPrimaryGeneratorAction());
+
+  //G4String particle = generator->GetParticleName();
+  //G4double energy = generator->GetEnergy() / CLHEP::MeV;
+
+  //G4String histTitle = "Edep (" + particle + ", " + std::to_string(energy) + " MeV)";
+  //analysisManager->SetH1Title(0, histTitle);
 
 }
 

@@ -69,6 +69,14 @@ PrimaryGeneratorAction::~PrimaryGeneratorAction()
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 
+//G4String PrimaryGeneratorAction::GetParticleName() const {
+//  return fParticleName;
+//}
+
+//G4double PrimaryGeneratorAction::GetEnergy() const {
+//  return fEnergy;
+//}
+
 void PrimaryGeneratorAction::GeneratePrimaries(G4Event* anEvent)
 {
   //this function is called at the begining of ecah event
@@ -80,6 +88,9 @@ void PrimaryGeneratorAction::GeneratePrimaries(G4Event* anEvent)
 
   G4double envSizeXY = 0;
   G4double envSizeZ = 0;
+
+  //fParticleName = fParticleGun->GetParticleDefinition()->GetParticleName();
+  //fEnergy = fParticleGun->GetParticleEnergy();
 
   if (!fEnvelopeBox)
   {
@@ -109,7 +120,7 @@ void PrimaryGeneratorAction::GeneratePrimaries(G4Event* anEvent)
   G4double y0 = envSizeXY * (0.2);
   G4double z0 = envSizeZ * 0.2  * (G4UniformRand()-0.5);
 
-  fParticleGun->SetParticlePosition(G4ThreeVector(x0,y0,z0));
+  fParticleGun->SetParticlePosition(G4ThreeVector(0.,y0,0.)); // changed x0 and z0 t0 0.
 
   fParticleGun->GeneratePrimaryVertex(anEvent);
 }

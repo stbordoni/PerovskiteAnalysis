@@ -35,6 +35,11 @@
 #include "G4Event.hh"
 #include "G4RunManager.hh"
 #include "G4LogicalVolume.hh"
+#include "G4ParticleDefinition.hh"
+#include "G4OpticalPhoton.hh"
+#include "G4Track.hh"
+#include "G4TrackVector.hh"
+#include "G4ProcessType.hh"
 
 namespace G4PerovSim
 {
@@ -56,15 +61,86 @@ void SteppingAction::UserSteppingAction(const G4Step* step)
   }
 
   // get volume of the current step
-  G4LogicalVolume* volume
-    = step->GetPreStepPoint()->GetTouchableHandle()
-      ->GetVolume()->GetLogicalVolume();
+  //G4LogicalVolume* volume
+  //  = step->GetPreStepPoint()->GetTouchableHandle()
+  //    ->GetVolume()->GetLogicalVolume();
 
   // check if we are in scoring volume
-  if (volume != fScoringVolume) return;
+  //if (volume != fScoringVolume) return;
+
+  // want to include muons entering and exiting the crystal
+  G4LogicalVolume* preVol = nullptr;
+  G4LogicalVolume* postVol = nullptr;
+
+  if (step->GetPreStepPoint()->GetTouchableHandle()->GetVolume())
+    preVol = step->GetPreStepPoint()->GetTouchableHandle()->GetVolume()->GetLogicalVolume();
+
+  if (step->GetPostStepPoint()->GetTouchableHandle()->GetVolume())
+    postVol = step->GetPostStepPoint()->GetTouchableHandle()->GetVolume()->GetLogicalVolume();
+
+  // If the particle is in or entering or exiting the scoring volume, process the step
+  if (preVol != fScoringVolume && postVol != fScoringVolume) return;
+
+
+  G4Track* track = step->GetTrack();
+  G4String processName = step->GetPostStepPoint()->GetProcessDefinedStep()->GetProcessName();
+  //if (track->GetDefinition()->GetParticleName() == "gamma") {
+    //G4cout << "Gamma interacted via: " << processName << G4endl;
+
+  // troubleshooting muon transportation energy deposits
+  G4StepPoint* preStepPoint = step->GetPreStepPoint();
+  const G4VProcess* process = preStepPoint->GetProcessDefinedStep();
+  G4StepPoint* postStepPoint = step->GetPostStepPoint();
+
+  //if (process) {
+    //G4cout << "Process: " << process->GetProcessName() << G4endl;
+  //  G4cout << "Pre-volume: " << preStepPoint->GetTouchableHandle()->GetVolume()->GetName() << G4endl;
+  //  G4cout << "Post-volume: " << postStepPoint->GetTouchableHandle()->GetVolume()->GetName() << G4endl;
+    //G4cout << "Track status: " << track->GetTrackStatus() << G4endl;
+  //}
+
+  //}
+
+    // Get secondaries generated in this step
+    auto secondaries = step->GetSecondaryInCurrentStep();
+    
+    for (const auto& secondary : *secondaries) {
+        const G4String& creatorProcess = secondary->GetCreatorProcess() ? secondary->GetCreatorProcess()->GetProcessName() : "Unknown";
+
+        //if (creatorProcess == "Scintillation") {
+            G4cout << "✨ Secondary particle ["
+                   << secondary->GetParticleDefinition()->GetParticleName()
+                   << "] created by " << creatorProcess
+                   << " at position " << secondary->GetPosition()
+                   << " with energy " << secondary->GetKineticEnergy() / CLHEP::keV << " keV"
+                   << G4endl;
+        //}
+    }
+
 
   // collect energy deposited in this step
   G4double edepStep = step->GetTotalEnergyDeposit();
+  if (edepStep > 0.) { //Debug step//
+    G4Track* track = step->GetTrack();
+    G4String processName = step->GetPostStepPoint()->GetProcessDefinedStep()->GetProcessName();
+    G4cout << "Edep: " << edepStep / CLHEP::keV << " keV"
+             << " by " << track->GetDefinition()->GetParticleName()
+             << ", Track ID: " << track->GetTrackID()
+             << ", Parent ID: " << track->GetParentID()
+             << ", interacted via: " << processName
+             << G4endl;
+    //if (track->GetParentID() == 0) {
+      //G4cout << "Edep: " << edepStep
+             //<< " by " << track->GetDefinition()->GetParticleName()
+             //<< ", Track ID: " << track->GetTrackID()
+             //<< ", Parent ID: " << track->GetParentID()
+             //<< ", interacted via: " << processName << G4endl;
+             //<< G4endl;
+  
+      // Accumulate only if it's a primary
+      //fEventAction->AddEdep(edepStep);
+    //}
+  } 
   fEventAction->AddEdep(edepStep);
 }
 

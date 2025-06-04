@@ -35,6 +35,9 @@
 
 class G4VPhysicalVolume;
 class G4LogicalVolume;
+class G4Material;
+class G4MaterialPropertiesTable;
+
 
 /// Detector construction class to define materials and geometry.
 
@@ -53,6 +56,8 @@ class DetectorConstruction : public G4VUserDetectorConstruction
 
   protected:
     G4LogicalVolume* fScoringVolume = nullptr;
+
+    G4MaterialPropertiesTable* crystal_prop = nullptr;
 };
 
 }
