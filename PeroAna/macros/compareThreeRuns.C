@@ -115,7 +115,7 @@ void compareThreeRuns(TString f_1 ="run1",
     c4->Divide(2,1);
     c4->cd(1);
     if (tree1_ok){
-        TH2F* htemp1tailnPeaks = (TH2F*)tree1->Draw("tailInt:npeaks>>htemp1tailnPeaks(14, 0, 14, 5.q0, -1, 10)", "", "COLZ");
+        TH2F* htemp1tailnPeaks = (TH2F*)tree1->Draw("tailInt:npeaks>>htemp1tailnPeaks(14, 0, 14, 50, -1, 10)", "", "COLZ");
     //hist2d->Draw("COLZ");
         //if (tree1_ok) tree1->Draw("tailInt:npeaks", "", "COLZ");     
         //htemp1tailnPeaks->GetXaxis()->SetTitle("N peaks");
