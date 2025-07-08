@@ -124,10 +124,11 @@ int main(int argc, char *argv[]){
 
 
     //FileOutput = new TFile(fileOut.Data(),"RECREATE");
-    FileOutput = new TFile(outputana_filename.c_str(),"RECREATE");
-    if(!FileOutput) {std::cout << "no output file! exit." << std::endl; exit(1);}
-    //dataOut    = new TTree("Events","Events");
-    //storing variables in another tree
+    if (!displaywave){
+        FileOutput = new TFile(outputana_filename.c_str(),"RECREATE");
+        if(!FileOutput) {std::cout << "no output file! exit." << std::endl; exit(1);}
+    }
+    
     
     TTree *output_tree; 
     //storing variables in another tree
@@ -145,6 +146,8 @@ int main(int argc, char *argv[]){
     std::vector<double> peakInt;
     std::vector<double> asympeakInt;
     std::vector<double> peakAmp;
+    int nphotons_tailInt;
+    std::vector<std::vector<double>> peak_interdistance;
 
     output_tree->Branch("baseline", &baseline);
     output_tree->Branch("pulseInt", &pulseInt);   
@@ -157,6 +160,8 @@ int main(int argc, char *argv[]){
     output_tree->Branch("peakInt", &peakInt);
     output_tree->Branch("asympeakInt", &asympeakInt);   
     output_tree->Branch("peakAmp", &peakAmp);
+    output_tree->Branch("nphotons_tailInt", &nphotons_tailInt);
+    output_tree->Branch("peak_interdistance", &peak_interdistance); // Store as a vector of vectors
     
     //output_tree->Branch("ToT", &ToT);
    
@@ -375,7 +380,8 @@ int main(int argc, char *argv[]){
                     //couont and record the information about the good peaks    
                     myevent.ngoodpeaks++;         
                     myevent.x_peak.push_back(xp);
-                    myevent.y_peak.push_back(yp);
+                    myevent.y_peak.push_back(yp);                    
+
                     if (verbose) std::cout << " found a good peak  x: " << xp << " ; y: " << yp << std::endl;
                     //std::cout << " found a good peak  x: " << xp << " ; y: " << yp << std::endl;
 
@@ -397,7 +403,7 @@ int main(int argc, char *argv[]){
                     if (bin - range_low >= 0)
                         lowedge_asymInt = bin - range_low;
                     else 
-                       lowedge_asymInt = 0;
+                    lowedge_asymInt = 0;
 
                     if (bin + range_up <1023)
                         upedge_asymInt = bin + range_up;
@@ -412,11 +418,12 @@ int main(int argc, char *argv[]){
                         h_AsympeakInt->Fill(asymlocalI); //to record the computed integral
                     }
                     myevent.asympeak_integral.push_back(asymlocalI);
-
+                    
                     if (asymlocalI > SPE_INTEGRAL)
-                      myevent.ngoodpeaks_specut++;       
-
+                        myevent.ngoodpeaks_specut++;  
+                
                 }
+                
             }
 
  
@@ -424,7 +431,8 @@ int main(int argc, char *argv[]){
             std::cout << "found " << myevent.ngoodpeaks << " good peaks (i.e. x3*baseline) with baseline =" << myevent.baseline << std::endl;
             
             if (! myevent.y_peak.empty()){
-        
+                
+
                 int maxElementIndex = std::max_element(myevent.y_peak.begin(),myevent.y_peak.end()) - myevent.y_peak.begin();
                 int maxElement = *std::max_element(myevent.y_peak.begin(), myevent.y_peak.end());
                 //double tailIntegral = 0;
@@ -435,7 +443,12 @@ int main(int argc, char *argv[]){
                 std::vector <double> x_peak_left;                    
                 int countpeaks_right=0;
                 int countpeaks_left=0;
-                for (auto ix: myevent.x_peak ){
+                
+                //for (auto ix: myevent.x_peak ){ 
+                for (int ipeak = 0; ipeak < myevent.x_peak.size(); ipeak++){
+                    double ix = myevent.x_peak.at(ipeak);
+                    if (myevent.asympeak_integral.at(ipeak) < SPE_INTEGRAL)
+                        continue; // skip the peaks with integral below the threshold
                     if (ix < myevent.x_peak.at(maxElementIndex) ){
                         h_count_peaks_entries->Fill(1); //if peak is on the left of the max peak
                         countpeaks_left++;
@@ -510,8 +523,9 @@ int main(int argc, char *argv[]){
                 h_nphotons_asympeak->Fill(myevent.asympeak_integral.at(i)/SPE_INTEGRAL);
             }
             
+            // compute the number of photons from the tail integral
             h_nphotons_tailInt->Fill(myevent.tailIntegral/SPE_INTEGRAL);
-
+            
 
 
 
@@ -659,6 +673,22 @@ int main(int argc, char *argv[]){
     peakInt=myevent.peak_integral;
     asympeakInt=myevent.asympeak_integral;
     tailInt=myevent.tailIntegral;
+    nphotons_tailInt = myevent.tailIntegral/SPE_INTEGRAL;
+
+    //std::cout << " myevent.peak_interdistance.size() " << myevent.peak_interdistance.size() <<std::endl;
+
+    for (int i =0; i< myevent.peak_interdistance.size(); i++){
+        std::cout << "peak interdistance " << i << " : " << myevent.peak_interdistance.at(i).size() << std::endl;
+        if (myevent.peak_interdistance.at(i).size() > 0) {
+            for (int j=0; j<myevent.peak_interdistance.at(i).size(); j++){
+                std::cout << "i : " <<i << "  ; j : " << j << " " << myevent.peak_interdistance.at(i).at(j) << " ";
+            }
+        }
+       
+    }
+    //distmaxAmppeaks_right = myevent.distmaxAmppeaks_right;
+    peak_interdistance = myevent.peak_interdistance; // this is a vector of vectors, so it will be stored as such in the tree
+
     
     output_tree->Fill();
     }
@@ -770,6 +800,7 @@ int main(int argc, char *argv[]){
     c5->cd();
     leg_iterpeaks->Draw("same");
 
+    c5->SaveAs(plotspath+Runname+"_peak_interdistance_5sigmathr.pdf");
     
     TCanvas* c6 = new TCanvas("c6", "c6", 1000, 500);
     c6->Divide(2,1);
@@ -778,11 +809,12 @@ int main(int argc, char *argv[]){
     c6->cd(2);
     h_nphotons_asympeak->Draw();
 
-    //before closing produce an output tree
-    FileOutput->cd();
-    output_tree->Write();
-    FileOutput->Close();
-
+    //before closing produce an output tree (if the display is not "ON")
+    if (!displaywave){
+        FileOutput->cd();
+        output_tree->Write();
+        FileOutput->Close();
+    }
     app->Run();    
     return 0;
 }

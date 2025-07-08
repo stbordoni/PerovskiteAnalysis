@@ -25,6 +25,7 @@ void Event::Init(){
     ngoodpeaks=0;
     peak_integral.clear();
     asympeak_integral.clear();
+    peak_interdistance.clear();
 
     //setEventId();
     //channelId();
@@ -173,11 +174,18 @@ void Event::FindMaxAmp(){
 void Event::ComputeSecPeakInterdistance(int maxpeak_x, std::vector <double> peak_x, std::vector<TH1F*> &h_tmp)
 {
 
+    //peak_interdistance.clear();
+    peak_interdistance.reserve(peak_x.size());
+    for (int i=0; i<peak_interdistance.size(); i++){
+        peak_interdistance.emplace_back(std::vector<double>());
+    }
+    
     if (peak_x.size()){
     //compute first the distance between the first secondary peak and the maxAmp peak
         double maxAmp_dist = peak_x.at(0) - maxpeak_x;
         h_tmp[0]->Fill(maxAmp_dist);
-    
+        peak_interdistance[0].emplace_back(maxAmp_dist);
+
         double tmp_dist = -999;
         int maxNpeaks = peak_x.size();
 
@@ -187,6 +195,9 @@ void Event::ComputeSecPeakInterdistance(int maxpeak_x, std::vector <double> peak
         for (int ix=1; ix<maxNpeaks; ix++){
             tmp_dist = peak_x.at(ix) - peak_x.at(ix-1);
             h_tmp[ix]->Fill(tmp_dist);
+            //std::cout << "before filling the vector , ix " << ix << std::endl;
+            peak_interdistance[ix].emplace_back(tmp_dist);
+            //std::cout << peak_interdistance[ix].size() << " elements in the vector " << ix << std::endl;
         }
     }
 

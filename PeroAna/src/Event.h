@@ -51,6 +51,7 @@ public:
     std::vector<double> y_peak;
     std::vector<double> peak_integral;
     std::vector<double> asympeak_integral;
+    std::vector<std::vector<double>> peak_interdistance;
 
     int ngoodpeaks;
     int ngoodpeaks_specut;
