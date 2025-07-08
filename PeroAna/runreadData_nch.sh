@@ -100,7 +100,7 @@ else
     echo "Error: Program execution failed."
 fi
 
-exit
+
 
 echo "Currently we are in"
 pwd
@@ -116,7 +116,7 @@ if [ $? -eq 0 ]; then
     #cd src/ || exit; # executable is here
     
     #here are analysis options
-    display_waveforms=false
+    display_waveforms=true
     cd make
 
     
@@ -125,9 +125,9 @@ if [ $? -eq 0 ]; then
     # Run the analysis
     #echo $display_waveforms
 
-    ./PerovAna $rootfile_path $display_waveforms
-    #./PerovAna
-    echo "Analysis code successfully executed. All done! "
+    ./DisplayWaveforms $rootfile_path $display_waveforms
+
+    echo "DisplayWaveforms code successfully executed. All done! "
 else
     echo "Error: Executçion failed."
 fi
