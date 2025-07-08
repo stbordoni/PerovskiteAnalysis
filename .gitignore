@@ -26,6 +26,12 @@
 *.a
 *.lib
 
+*.pyc
+*.pyi
+*.py
+
+*.csv
+
 # Executables
 *.exe
 *.out
@@ -37,3 +43,5 @@
 
 build/
 rootinputfiles/
+perovenv/
+perovenv3.12/
