@@ -119,7 +119,7 @@ void compareThreeRuns(TString f_1 ="run1",
     c4->Divide(2,1);
     c4->cd(1);
     if (tree1_ok){
-        TH2F* htemp1tailnPeaks = (TH2F*)tree1->Draw("tailInt/0.09636:npeaks>>htemp1tailnPeaks(14, 0, 14, 100, 0, 100)", "", "COLZ");
+        TH2F* htemp1tailnPeaks = (TH2F*)tree1->Draw("tailInt/0.09636:npeaks_specut>>htemp1tailnPeaks(14, 0, 14, 100, 0, 100)", "", "COLZ");
     //hist2d->Draw("COLZ");
         //if (tree1_ok) tree1->Draw("tailInt:npeaks", "", "COLZ");     
         //htemp1tailnPeaks->GetXaxis()->SetTitle("N peaks");
@@ -130,7 +130,7 @@ void compareThreeRuns(TString f_1 ="run1",
     
     c4->cd(2);
     if (tree2_ok){
-    TH2F* htemp2tailnPeaks = (TH2F*)tree2->Draw("tailInt/0.09636:npeaks>>htemp2tailnPeaks( 14, 0, 14, 100, 0, 100)", "", "COLZ");
+    TH2F* htemp2tailnPeaks = (TH2F*)tree2->Draw("tailInt/0.09636:npeaks_specut>>htemp2tailnPeaks( 14, 0, 14, 100, 0, 100)", "", "COLZ");
     //if (tree2_ok) tree2->Draw("(tailInt:npeaks)>>htemp2tailnPeaks(100, 0, 10, 12, -0.5, 11.5)", "", "");
     
     //if (tree2_ok) tree2->Draw("tailInt:npeaks", "", "COLZ");
