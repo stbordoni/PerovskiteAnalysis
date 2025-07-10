@@ -10,7 +10,8 @@ class Event {
 public:
     //Event();
    
-    Event(int evt, int chan, const std::vector<double>& wave);
+    //Event(int evt, int chan, const std::vector<double>& wave);
+    Event(int evt, int chan, const std::vector<double>& wave); 
     ~Event();
 
     
@@ -25,9 +26,15 @@ public:
     // Getter methods
     int GetEventId() const;
     int GetChannelId() const;
-    const std::vector<double>* GetWaveform() const; 
-    const std::vector<double>* GetRawWaveform() const; 
-    const std::vector<double>* GetAvgMeanWaveform() const; 
+    double GetBaseline() const; 
+    //const std::vector<double>* GetWaveform() const; 
+    //const std::vector<double>* GetRawWaveform() const; 
+    //const std::vector<double>* GetAvgMeanWaveform() const; 
+    const std::vector<double> GetWaveform() const; 
+    const std::vector<double> GetRawWaveform() const; 
+    const std::vector<double> GetAvgMeanWaveform() const; 
+    
+
     void ComputeMovingAverage(int step=5, bool debug=false);
     void ComputeBaseline(bool _removenoise);
     void SubtractBaseline(bool _removenoise);
@@ -56,8 +63,11 @@ public:
     int ngoodpeaks;
     int ngoodpeaks_specut;
 
-    std::vector<double>* Waveform;
-    std::vector<double>* avgWaveform;
+    //std::vector<double>* Waveform;
+    //std::vector<double>* avgWaveform;
+
+    std::vector<double> Waveform;
+    std::vector<double> avgWaveform;
 
 
 private:
@@ -73,7 +83,7 @@ private:
     //double leadingEdgeTime;
     //double trailingEdgeTime;
     //double rateCounter;
-    std::vector<double>* rawWaveform =0;
+    std::vector<double> rawWaveform;
     
 };
 

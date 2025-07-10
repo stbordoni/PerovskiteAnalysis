@@ -136,32 +136,32 @@ int main(int argc, char *argv[]){
 
     
 
-    double baseline;
-    double pulseInt;
-    double tailInt;
-    int npeaks;
-    int npeaks_specut;
-    int distmaxAmppeaks_right;
-    int distmaxAmppeaks_left;
-    std::vector<double> peakInt;
-    std::vector<double> asympeakInt;
-    std::vector<double> peakAmp;
-    int nphotons_tailInt;
-    std::vector<std::vector<double>> peak_interdistance;
+        double baseline;
+        double pulseInt;
+        double tailInt;
+        int npeaks;
+        int npeaks_specut;
+        int distmaxAmppeaks_right;
+        int distmaxAmppeaks_left;
+        std::vector<double> peakInt;
+        std::vector<double> asympeakInt;
+        std::vector<double> peakAmp;
+        int nphotons_tailInt;
+        std::vector<std::vector<double>> peak_interdistance;
 
-    output_tree->Branch("baseline", &baseline);
-    output_tree->Branch("pulseInt", &pulseInt);   
-    output_tree->Branch("tailInt", &tailInt);   
-    output_tree->Branch("npeaks", &npeaks);   
-    output_tree->Branch("npeaks_specut", &npeaks_specut);   
-    output_tree->Branch("distmaxAmppeaks_right", &distmaxAmppeaks_right);  
-    output_tree->Branch("distmaxAmppeaks_left", &distmaxAmppeaks_left);   
-     
-    output_tree->Branch("peakInt", &peakInt);
-    output_tree->Branch("asympeakInt", &asympeakInt);   
-    output_tree->Branch("peakAmp", &peakAmp);
-    output_tree->Branch("nphotons_tailInt", &nphotons_tailInt);
-    output_tree->Branch("peak_interdistance", &peak_interdistance); // Store as a vector of vectors
+        output_tree->Branch("baseline", &baseline);
+        output_tree->Branch("pulseInt", &pulseInt);   
+        output_tree->Branch("tailInt", &tailInt);   
+        output_tree->Branch("npeaks", &npeaks);   
+        output_tree->Branch("npeaks_specut", &npeaks_specut);   
+        output_tree->Branch("distmaxAmppeaks_right", &distmaxAmppeaks_right);  
+        output_tree->Branch("distmaxAmppeaks_left", &distmaxAmppeaks_left);   
+        
+        output_tree->Branch("peakInt", &peakInt);
+        output_tree->Branch("asympeakInt", &asympeakInt);   
+        output_tree->Branch("peakAmp", &peakAmp);
+        output_tree->Branch("nphotons_tailInt", &nphotons_tailInt);
+        output_tree->Branch("peak_interdistance", &peak_interdistance); // Store as a vector of vectors
     
     //output_tree->Branch("ToT", &ToT);
    
@@ -196,13 +196,13 @@ int main(int argc, char *argv[]){
 
     // Print or use headerInfo as needed
 
-    // Read the event tree
-    TTree *eventTree = dynamic_cast<TTree*>(file->Get("eventTree"));
-    if (!eventTree) {
-        std::cerr << "Error: Event tree not found in file " << filename << std::endl;
-        file->Close();
-        return 1;
-    }
+        // Read the event tree
+        TTree *eventTree = dynamic_cast<TTree*>(file->Get("eventTree"));
+        if (!eventTree) {
+            std::cerr << "Error: Event tree not found in file " << filename << std::endl;
+            file->Close();
+            return 1;
+        }
 
     EventData eventData;
 
@@ -296,8 +296,8 @@ int main(int argc, char *argv[]){
        
 
 
-        if (myevent.GetRawWaveform()->size()<nSamples){
-            std::cout << "Error on Event " <<  myevent.GetEventId() << ": waveform corrupted (<1024 samples) --> "<< myevent.GetRawWaveform()->size()  << std::endl;
+        if (myevent.GetRawWaveform().size()<nSamples){
+            std::cout << "Error on Event " <<  myevent.GetEventId() << ": waveform corrupted (<1024 samples) --> "<< myevent.GetRawWaveform().size()  << std::endl;
             continue;
         } 
         else{
@@ -330,9 +330,9 @@ int main(int argc, char *argv[]){
             //then remove all this histo part to the displaywave block
             for(int isample=0; isample<nSamples; isample++){
                 if (isample>10) {
-                    h_waveform->SetBinContent(isample,myevent.GetRawWaveform()->at(isample)); //raw waveform
-                    h_waveforminTime->SetBinContent(isample,myevent.GetRawWaveform()->at(isample));
-                    h_AvgMeanwaveform->SetBinContent(isample,myevent.GetAvgMeanWaveform()->at(isample)); //averaged mean waveform
+                    h_waveform->SetBinContent(isample,myevent.GetRawWaveform().at(isample)); //raw waveform
+                    h_waveforminTime->SetBinContent(isample,myevent.GetRawWaveform().at(isample));
+                    h_AvgMeanwaveform->SetBinContent(isample,myevent.GetAvgMeanWaveform().at(isample)); //averaged mean waveform
                 }
                 else  {
                     h_waveform->SetBinContent(isample,0); // prevent first bins with strange values to be shown.
@@ -413,8 +413,9 @@ int main(int argc, char *argv[]){
                     //std::cout << " \t \t low edge: " << lowedge_asymInt << " \t ; upedge:  " << upedge_asymInt << std::endl;
 
                     for (int isample=lowedge_asymInt; isample<upedge_asymInt; isample++){
-                        h_AsymLocalIntegral->SetBinContent(isample,myevent.GetAvgMeanWaveform()->at(isample)); // to draw the waveform and check the edges in use
-                        asymlocalI+=myevent.avgWaveform->at(isample);
+                        h_AsymLocalIntegral->SetBinContent(isample,myevent.GetAvgMeanWaveform().at(isample)); // to draw the waveform and check the edges in use
+                        //asymlocalI+=myevent.avgWaveform->at(isample);
+                        asymlocalI+=myevent.avgWaveform.at(isample);
                         h_AsympeakInt->Fill(asymlocalI); //to record the computed integral
                     }
                     myevent.asympeak_integral.push_back(asymlocalI);
@@ -485,10 +486,10 @@ int main(int argc, char *argv[]){
                         else
                             startI = 0;
 
-                        for (int isample = startI; isample < myevent.GetAvgMeanWaveform()->size(); isample++) {
+                        for (int isample = startI; isample < myevent.GetAvgMeanWaveform().size(); isample++) {
                             //tailIntegral += myevent.GetAvgMeanWaveform()->at(isample);
-                            myevent.tailIntegral += myevent.GetAvgMeanWaveform()->at(isample);
-                            h_tailIntegral->SetBinContent(isample,myevent.GetAvgMeanWaveform()->at(isample));
+                            myevent.tailIntegral += myevent.GetAvgMeanWaveform().at(isample);
+                            h_tailIntegral->SetBinContent(isample,myevent.GetAvgMeanWaveform().at(isample));
                         }
 
                         for (int isample = 0; isample < startI; isample++)
