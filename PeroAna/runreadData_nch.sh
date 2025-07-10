@@ -83,7 +83,7 @@ cd src/ || exit; # executable is here
 
     
 # Run the compiled program with the input and output file names
-echo "Converting the raw data in to a rootfile. The following command is exected: "
+echo "Converting the raw data in to a rootfile. The following command is executed: "
 command="./readData_nch $input_dir/$input_file $rootfile_path"
 echo $command
 echo ""
@@ -116,18 +116,22 @@ if [ $? -eq 0 ]; then
     #cd src/ || exit; # executable is here
     
     #here are analysis options
-    display_waveforms=true
-    cd make
+    display_waveforms=false
+    #cd make
 
     
 
 
     # Run the analysis
     #echo $display_waveforms
+    if [ "$display_waveforms" = true ]; then
+        echo "Display waveforms option is enabled. The following command is executed: "
+        ./DisplayWaveforms $rootfile_path $display_waveforms
+        echo "DisplayWaveforms code successfully executed. All done! "
+    else    
+        echo "Display waveforms option is disabled. The following command is executed: "
+        ./PerovAna_nch $rootfile_path $display_waveforms
+    fi
 
-    ./DisplayWaveforms $rootfile_path $display_waveforms
-
-    echo "DisplayWaveforms code successfully executed. All done! "
-else
-    echo "Error: Executçion failed."
+    
 fi

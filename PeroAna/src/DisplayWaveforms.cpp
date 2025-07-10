@@ -130,10 +130,12 @@ int main(int argc, char *argv[]){
     Long64_t nEntries = eventTree->GetEntries();
 
     for (Long64_t ievt = 0; ievt < nEntries-1; ievt++) {
+    //for (Long64_t ievt = 0; ievt < 5; ievt++) { //for testing purposes
+      
         eventTree->GetEntry(ievt);
 
-        if ((ievt+1)%100 == 0) 
-            std::cout << "====== EVENT " << ievt+1 << "======" << std::endl;
+        //if ((ievt+1)%100 == 0) 
+        //    std::cout << "====== EVENT " << ievt+1 << "======" << std::endl;
 
         size_t nChannels = channelId->size();    
 
@@ -159,27 +161,42 @@ int main(int argc, char *argv[]){
 
 
         for (size_t ich = 0; ich < nChannels; ich++) {
+            //std::cout << "Processing channel " << ich+1 << " of " << nChannels << std::endl;
             int chId = channelId->at(ich);
+
             std::vector<double> waveform = dataSamples->at(ich);
 
             // Create your Event object
             Event myevent(event, chId, waveform);
             //Event myevent(eventData.event, eventData.channelId, *eventData.dataSamples);
         
-            if (myevent.GetRawWaveform()->size()<nSamples){
-                std::cout << "Error on Event " <<  myevent.GetEventId() << ": waveform corrupted (<1024 samples) --> "<< myevent.GetRawWaveform()->size()  << std::endl;
+            if (myevent.GetRawWaveform().size()<nSamples){
+                std::cout << "Error on Event " <<  myevent.GetEventId() << ": waveform corrupted (<1024 samples) --> "<< myevent.GetRawWaveform().size()  << std::endl;
                 continue;
             } 
             else{
 
+                //std::cout << "Event " << myevent.GetEventId() << " channel " << myevent.GetChannelId() << " has " << myevent.GetRawWaveform().size() << " samples" << std::endl;
+                //for (int isample = 0; isample < nSamples; isample++) {
+                //    double val = waveform.at(isample);
+                //    std::cout << val << " ";
+                //}
+                //std::cout << std::endl;
+                //continue;
                 myevent.ComputeMovingAverage(20, verbose);
+                //std::cout << "after computing moving average" << std::endl;
                 myevent.ComputeBaseline(mitigate_noise);
+
+                //std::cout << "after computing baseline" << std::endl;
                 myevent.SubtractBaseline(mitigate_noise);
+                //std::cout << "after subtracting baseline" << std::endl;
+
+                //continue;
                 //myevent.FindMaxAmp();
 
                 for (int isample = 0; isample < nSamples; isample++) {
                     double val = waveform.at(isample);
-                    double avg_val = myevent.GetAvgMeanWaveform()->at(isample);
+                    double avg_val = myevent.GetAvgMeanWaveform().at(isample);
 
                     if (isample > 10) {
                         h_waveform[ich]->SetBinContent(isample+1, val);
@@ -235,7 +252,7 @@ int main(int argc, char *argv[]){
                     h_AvgMeanwaveform[ich]->SetLineStyle(1);        
                     h_AvgMeanwaveform[ich]->SetLineWidth(3);
                     h_waveform[ich]->SetLineWidth(1);
-                    
+
                     h_AvgMeanwaveform[ich]->Draw("HISTsame");
                     h_waveform[ich]->Draw("HISTsame");
                 }
