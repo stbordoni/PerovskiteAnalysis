@@ -83,7 +83,7 @@ cd src/ || exit; # executable is here
 
     
 # Run the compiled program with the input and output file names
-echo "Converting the raw data in to a rootfile. The following command is exected: "
+echo "Converting the raw data in to a rootfile. The following command is executed: "
 command="./readData $input_dir/$input_file $rootfile_path"
 echo $command
 echo ""
@@ -116,6 +116,8 @@ if [ $? -eq 0 ]; then
     
     #here are analysis options
     display_waveforms=false
+    #cd make
+
     
 
 
@@ -126,5 +128,5 @@ if [ $? -eq 0 ]; then
     #./PerovAna
     echo "Analysis code successfully executed. All done! "
 else
-    echo "Error: Execution failed."
+    echo "Error: Executçion failed."
 fi
