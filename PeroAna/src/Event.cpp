@@ -1,6 +1,8 @@
 #include "Event.h"
 #include <iostream>
 #include <algorithm>
+#include <TSpectrum.h>
+#include "Config.h"
 
 
 
@@ -24,10 +26,18 @@ void Event::Init(){
 
     //std::cout<< " Initialize event " << std::endl;
     baseline = 0;
+    integral = 0;
+    tailIntegral = 0;
+    maxAmp = 0;
+    mainPeakIdx = -1; // Initialize to -1 to indicate no peak found yet
+    ToT = 0;
+    //distmaxAmppeaks_right = 0;
+    //distmaxAmppeaks_left = 0;
     //pulseInt = 0;
     //Waveform.clear();
-    tailIntegral=0; 
+    
     ngoodpeaks=0;
+    ngoodpeaks_specut=0;
     peak_integral.clear();
     asympeak_integral.clear();
     peak_interdistance.clear();
@@ -73,9 +83,6 @@ const std::vector<double> Event::GetWaveform() const {
 }
 
 
-double Event::GetBaseline() const{
-    return baseline;
-}
 
 
 
@@ -158,10 +165,11 @@ void Event::SubtractBaseline(bool _removenoise){
 
 
 void Event::ComputeIntegral(){
-    integral = 0;
+    //integral = 0;
     //for(int i=0;i<Waveform->size();i++) integral += Waveform->at(i);  // for the moment without conversion
-    for(int i=0;i<Waveform.size();i++) integral += Waveform.at(i);  // for the moment without conversion
+    for(int i=0;i<rawWaveform.size();i++) integral += rawWaveform.at(i);  // for the moment without conversion
 }
+
 
 
 
@@ -198,11 +206,196 @@ double Event::ComputeLocalIntegral(int xbin, int Irange ){
 }
 
 
+
+void Event::ComputeTailIntegral(int preSamples)
+{
+    tailIntegral = 0.0;
+
+    if (mainPeakIdx < 0 || mainPeakIdx >= (int)peakPositions.size())
+        return;
+
+    int peakSample = static_cast<int>(std::round(peakPositions[mainPeakIdx]));
+    int startSample = (peakSample - preSamples >= 0) ? (peakSample - preSamples) : 0;
+
+    for (size_t i = startSample; i < avgWaveform.size(); ++i) {
+        tailIntegral += avgWaveform.at(i);
+    }
+}
+
+
+
+
+void Event::FindMainPeak()
+{
+    if (peakAmplitudes.empty()) {
+        mainPeakIdx = -1;
+        return;
+    }
+
+    size_t imax = 0;
+    maxAmp = peakAmplitudes[0];
+
+    for (size_t i = 1; i < peakAmplitudes.size(); ++i) {
+        if (peakAmplitudes[i] > maxAmp) {
+            maxAmp = peakAmplitudes[i];
+            imax = i;
+        }
+    }
+
+    mainPeakIdx = static_cast<int>(imax);
+}
+
+
 void Event::FindMaxAmp(){
     //maxAmp = *max_element(Waveform->begin(), Waveform->end());
     maxAmp = *max_element(Waveform.begin(), Waveform.end());
 
 }
+
+
+void Event::FindPeaks(int maxPeaks, float sigma, float threshold, bool verbose) {
+    peakPositions.clear();
+    peakAmplitudes.clear();
+
+    // Sanity check
+    if (avgWaveform.empty()) {
+        std::cerr << "[FindPeaks] Empty waveform, skipping.\n";
+        return;
+    }
+
+    int NSamples = avgWaveform.size();
+
+    // Create histogram from waveform
+    TH1F* h_AvgMeanwaveform = new TH1F("h_AvgMeanwaveform","", NSamples,0,1023);
+
+    for(int isample=0; isample<NSamples; isample++){
+        if (isample>10) {
+            h_AvgMeanwaveform->SetBinContent(isample+1, avgWaveform.at(isample));
+        } else {
+            h_AvgMeanwaveform->SetBinContent(isample+1, 0);
+        }
+    }   
+    
+
+    // Run TSpectrum
+    TSpectrum *spectrum = new TSpectrum(2 * maxPeaks);
+    int nFound = spectrum->Search(h_AvgMeanwaveform, sigma, "goff", threshold);
+
+    if (verbose)
+        std::cout << "[FindPeaks] Found " << nFound << " candidate peaks\n";
+
+    Double_t *xPeaks = spectrum->GetPositionX();
+
+    for (int p = 0; p < nFound; p++) {
+        Double_t xp = xPeaks[p];
+        Int_t bin = h_AvgMeanwaveform->GetXaxis()->FindBin(xp);
+        Double_t yp = h_AvgMeanwaveform->GetBinContent(bin);
+
+        if (verbose)
+            std::cout << "Peak " << p << ": x = " << xp << ", y = " << yp << std::endl;
+
+        peakPositions.push_back(xp);
+        peakAmplitudes.push_back(yp);
+    }
+
+    delete spectrum;
+    delete h_AvgMeanwaveform;
+}
+
+
+
+void Event::AnalyzePeaks(double SPE_INTEGRAL, TH1* h_AsymLocalIntegral, TH1* h_AsympeakInt, bool verbose)
+{
+    int Nsamples = avgWaveform.size();
+
+    for (size_t ip = 0; ip < peakPositions.size(); ++ip) {
+        double xp = peakPositions[ip];
+        int bin = static_cast<int>(xp + 0.5);
+
+        int range_low = 15;
+        int range_up = 40;
+
+        int lowedge_asymInt = std::max(0, bin - range_low);
+        int upedge_asymInt = std::min(Nsamples - 1, bin + range_up);
+
+        double asymlocalI = 0;
+        for (int isample = lowedge_asymInt; isample < upedge_asymInt; ++isample) {
+            double val = avgWaveform.at(isample);
+            asymlocalI += val;
+
+            if (h_AsymLocalIntegral)
+                h_AsymLocalIntegral->SetBinContent(isample, val);
+        }
+
+        if (h_AsympeakInt)
+            h_AsympeakInt->Fill(asymlocalI);
+
+        // Save integral for this peak
+        asympeak_integral.push_back(asymlocalI);
+
+        if (asymlocalI > SPE_INTEGRAL) {
+            ngoodpeaks_specut++;
+            if (verbose) {
+                std::cout << "Peak at x=" << xp
+                          << " passed SPE integral cut: " << asymlocalI << std::endl;
+            }
+        } else {
+            if (verbose) {
+                std::cout << "Peak at x=" << xp
+                          << " rejected (integral too small): " << asymlocalI << std::endl;
+            }
+        }
+    }
+}
+
+
+void Event::SeparateLeftRightPeaks(bool verbose)
+{
+    leftPeakPositions.clear();
+    leftPeakAmplitudes.clear();
+    rightPeakPositions.clear();
+    rightPeakAmplitudes.clear();
+
+    if (mainPeakIdx < 0 || mainPeakIdx >= static_cast<int>(peakPositions.size())) {
+        std::cerr << "[Event::SeparateLeftRightPeaks] Invalid main peak index." << std::endl;
+        return;
+    }
+
+    double mainPeakPos = peakPositions[mainPeakIdx];
+
+    for (size_t i = 0; i < peakPositions.size(); ++i) {
+        if (i == static_cast<size_t>(mainPeakIdx))
+            continue;
+
+        if (peakPositions[i] < mainPeakPos) {
+            leftPeakPositions.push_back(peakPositions[i]);
+            leftPeakAmplitudes.push_back(peakAmplitudes[i]);
+        } else {
+            rightPeakPositions.push_back(peakPositions[i]);
+            rightPeakAmplitudes.push_back(peakAmplitudes[i]);
+        }
+    }
+    if (verbose) {
+        
+    std::cout << "[Event::SeparateLeftRightPeaks] Found "
+              << leftPeakPositions.size() << " peaks left, "
+              << rightPeakPositions.size() << " peaks right of main peak." << std::endl;
+    }
+}
+
+
+void Event::ComputePeakDistances()
+{
+    distancesRight.clear();
+
+    double mainPos = peakPositions[mainPeakIdx];
+
+    for (const auto& pos : rightPeakPositions) {
+        distancesRight.push_back(pos - mainPos);
+    }
+}
+
+
 
 void Event::ComputeSecPeakInterdistance(int maxpeak_x, std::vector <double> peak_x, std::vector<TH1F*> &h_tmp)
 {

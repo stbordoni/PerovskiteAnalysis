@@ -19,11 +19,13 @@ if( WITH_ROOT )
     cmessage( STATUS "Creating DisplayWaveforms executable..." )
     add_executable(DisplayWaveforms ${CMAKE_CURRENT_SOURCE_DIR}/DisplayWaveforms.cpp ${CMAKE_CURRENT_SOURCE_DIR}/Event.cpp)
     target_link_libraries(DisplayWaveforms ${ROOT_LIBRARIES})
+    target_link_libraries(DisplayWaveforms Spectrum)
     install( TARGETS DisplayWaveforms DESTINATION bin )
 
     cmessage( STATUS "Creating PerovAna_nch executable..." )
     add_executable(PerovAna_nch ${CMAKE_CURRENT_SOURCE_DIR}/PerovAna_nch.cpp ${CMAKE_CURRENT_SOURCE_DIR}/Event.cpp)
     target_link_libraries(PerovAna_nch ${ROOT_LIBRARIES})
+    target_link_libraries(PerovAna_nch Spectrum)
     install( TARGETS PerovAna_nch DESTINATION bin )
 
     cmessage( STATUS "Creating fft executable..." )

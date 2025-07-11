@@ -19,7 +19,9 @@
 #include <filesystem>
 #include <string>
 
+#include "Config.h"
 #include "Event.h"
+
 
 struct HeaderInfo {
     // Define the structure for header information
@@ -135,15 +137,18 @@ int main(int argc, char *argv[]){
     std::vector<double> out_pulseInt;
     std::vector<double> out_tailInt;
     std::vector<int> out_npeaks;
+    std::vector<double> out_peakMaxAmp;
     std::vector<int> out_npeaks_specut;
     std::vector<int> out_distmaxAmppeaks_right;
     std::vector<int> out_distmaxAmppeaks_left;
     std::vector<int> out_nphotons_tailInt;
+    
 
     // Multi-channel branches (vector-of-vectors: one vector per channel)
-    std::vector<std::vector<double>> out_peakInt;
-    std::vector<std::vector<double>> out_asympeakInt;
-    std::vector<std::vector<double>> out_peakAmp;
+    std::vector<std::vector<double>> out_peaksInt;
+    std::vector<std::vector<double>> out_asympeaksInt;
+    std::vector< std::vector<double> > out_distancemaxAmppeaks_right;
+    //std::vector<std::vector<double>> out_peakAmp;
     //std::vector<std::vector<std::vector<double>>> out_peak_interdistance;
 
 
@@ -156,9 +161,10 @@ int main(int argc, char *argv[]){
     output_tree->Branch("distmaxAmppeaks_right", &out_distmaxAmppeaks_right);
     output_tree->Branch("distmaxAmppeaks_left", &out_distmaxAmppeaks_left);
     output_tree->Branch("nphotons_tailInt", &out_nphotons_tailInt);
-    output_tree->Branch("peakInt", &out_peakInt);
-    output_tree->Branch("asympeakInt", &out_asympeakInt);
-    output_tree->Branch("peakAmp", &out_peakAmp);
+    output_tree->Branch("peakInt", &out_peaksInt);
+    output_tree->Branch("asympeakInt", &out_asympeaksInt);
+    output_tree->Branch("peakAmp", &out_peakMaxAmp);
+    output_tree->Branch("distancemaxAmppeaks_right", &out_distancemaxAmppeaks_right);
     //output_tree->Branch("peak_interdistance", &out_peak_interdistance);
 
 
@@ -208,14 +214,81 @@ int main(int argc, char *argv[]){
     //declare the vector of MultiChannelEvent to store the events
     //std::vector<MultiChannelEvent> eventList;
 
+    //declare histograms here:
+    std::vector<TH1F*> h_baseline;
+    std::vector<TH1F*> h_maxAmp;
+    std::vector<TH1F*> h_integral;
+    std::vector<TH1F*> h_peakInt;
+    std::vector<TH1F*> h_AsympeakInt;
+    std::vector<TH1F*> h_tailInt;
+    std::vector<TH1F*> h_Npeaksperevt;
+    std::vector<TH1F*> h_Ngoodpeaksperevt_specut;
+    std::vector<TH1F*> h_nphotons_tailInt;
 
+    std::vector<int> colors = {kRed, kBlue, kGreen+2, kMagenta, kCyan+2, kOrange+7, kBlack};
+
+    //size_t nChannels = channelId->size(); // number of channels in the event
+     for (int ich = 0; ich < 2; ++ich) {
+        TString name;
+
+        name = Form("h_baseline_ch%d", ich);
+        h_baseline.push_back(new TH1F(name, "", 250, 10, 10));
+        h_baseline[ich]->SetLineColor(colors[ich % colors.size()]);
+        h_baseline[ich]->SetLineWidth(2);
+
+        name = Form("h_maxAmp_ch%d", ich);
+        h_maxAmp.push_back(new TH1F(name, "", 100, 10, 10));
+        h_maxAmp[ich]->SetLineColor(colors[ich % colors.size()]);
+        h_maxAmp[ich]->SetLineWidth(2);
+
+
+        name = Form("h_integral_ch%d", ich);
+        h_integral.push_back(new TH1F(name, "", 100, 10, 10));
+        h_integral[ich]->SetLineColor(colors[ich % colors.size()]);
+        h_integral[ich]->SetLineWidth(2);
+
+
+        name = Form("h_peakInt_ch%d", ich);
+        h_peakInt.push_back(new TH1F(name, "", 100, 10, 10));
+        h_peakInt[ich]->SetLineColor(colors[ich % colors.size()]);
+        h_peakInt[ich]->SetLineWidth(2);
+
+        name = Form("h_AsympeakInt_ch%d", ich);
+        h_AsympeakInt.push_back(new TH1F(name, "", 100, 10, 10));
+        h_AsympeakInt[ich]->SetLineColor(colors[ich % colors.size()]);
+        h_AsympeakInt[ich]->SetLineWidth(2);
+
+        name = Form("h_tailInt_ch%d", ich);
+        h_tailInt.push_back(new TH1F(name, "", 100, 10, 10));
+        h_tailInt[ich]->SetLineColor(colors[ich % colors.size()]);
+        h_tailInt[ich]->SetLineWidth(2);
+
+        name = Form("h_Npeaksperevt_ch%d", ich);
+        h_Npeaksperevt.push_back(new TH1F(name, "", 15, -0.5, 14.5));
+        h_Npeaksperevt[ich]->SetLineColor(colors[ich % colors.size()]);
+        h_Npeaksperevt[ich]->SetLineWidth(2);
+
+        name = Form("h_Ngoodpeaksperevt_specut_ch%d", ich);
+        h_Ngoodpeaksperevt_specut.push_back(new TH1F(name, "", 15, -0.5, 14.5));
+        h_Ngoodpeaksperevt_specut[ich]->SetLineColor(colors[ich % colors.size()]);
+        h_Ngoodpeaksperevt_specut[ich]->SetLineWidth(2);
+        h_Ngoodpeaksperevt_specut[ich]->SetLineStyle(2);
+        
+
+        name = Form("h_nphotons_tailInt_ch%d", ich);
+        h_nphotons_tailInt.push_back(new TH1F(name, "nphotons tail integral", 50, -0.5, 49.5));
+        h_nphotons_tailInt[ich]->SetLineColor(colors[ich % colors.size()]);
+        h_nphotons_tailInt[ich]->SetLineWidth(2);
+    }    
+
+   
     Long64_t nEntries = eventTree->GetEntries();
 
-    //for (Long64_t ievt = 0; ievt < nEntries-1; ievt++) {
-    for (Long64_t ievt = 0; ievt < 5; ievt++) {
+    for (Long64_t ievt = 0; ievt < nEntries-1; ievt++) {
+    //for (Long64_t ievt = 0; ievt < 5; ievt++) {
         eventTree->GetEntry(ievt);
 
-        std::cout << "====== EVENT " << ievt+1 << "======" << std::endl;
+        //std::cout << "====== EVENT " << ievt+1 << "======" << std::endl;
 
         MultiChannelEvent multiCh;
         multiCh.eventId = event;
@@ -229,6 +302,10 @@ int main(int argc, char *argv[]){
         std::vector<TH1F*> h_waveform(nChannels);
         std::vector<TH1F*> h_waveforminTime(nChannels);
         std::vector<TH1F*> h_AvgMeanwaveform(nChannels);
+
+        
+
+
     
         for (size_t ich = 0; ich < nChannels; ich++) {
             int chId = channelId->at(ich);
@@ -248,6 +325,28 @@ int main(int argc, char *argv[]){
                 myevent.ComputeBaseline(mitigate_noise);
                 myevent.SubtractBaseline(mitigate_noise);
 
+                myevent.ComputeIntegral();
+
+                
+
+                myevent.FindPeaks(10, 10, 0.05, verbose); // Find peaks in the waveform
+                myevent.AnalyzePeaks(SPE_INTEGRAL, nullptr, nullptr, verbose); // Analyze peaks and compute integrals
+                
+                myevent.FindMainPeak(); // Find the main peak in the waveform
+                myevent.ComputeTailIntegral(25); // Compute tail integral
+
+                myevent.SeparateLeftRightPeaks(); // Separate left and right peaks
+                myevent.ComputePeakDistances(); // Compute distances between peaks
+
+                h_baseline[ich]->Fill(myevent.baseline);
+                h_maxAmp[ich]->Fill(myevent.maxAmp);
+                h_tailInt[ich]->Fill(myevent.tailIntegral);
+                h_Npeaksperevt[ich]->Fill(myevent.peakPositions.size());
+                h_Ngoodpeaksperevt_specut[ich]->Fill(myevent.ngoodpeaks_specut);
+                h_nphotons_tailInt[ich]->Fill(myevent.GetPhotonCountInTail());
+                h_integral[ich]->Fill(myevent.integral);
+                
+                //myevent.FindMaxAmp(); // Find the maximum amplitude in the waveform
 
 
             } // end if raw waveform size
@@ -258,29 +357,31 @@ int main(int argc, char *argv[]){
         } // end loop over channels
 
         //fill the output tree with the computed quantities
-        std::cout << "Filling the variables to be recorded in the tree for all channels" << multiCh.eventId << std::endl;
+        
         for (const auto& chEvt : multiCh.channels) {
             out_baseline.push_back(chEvt.GetBaseline());
-            //out_pulseInt.push_back(chEvt.GetPulseIntegral());
+            out_pulseInt.push_back(chEvt.GetPulseIntegral());
             // ... other branches
-            //pulseInt.push_back(chEvt.GetPulseIntegral());
-            //tailInt.push_back(chEvt.GetTailIntegral());
-            //npeaks.push_back(chEvt.GetNumberOfPeaks());
-            //npeaks_specut.push_back(chEvt.GetNumberOfPeaksWithSpecut());
-            //distmaxAmppeaks_right.push_back(chEvt.GetRightDistanceFromMax());
+            
+            out_tailInt.push_back(chEvt.GetTailIntegral());
+            out_peakMaxAmp.push_back(chEvt.GetMaxAmp());
+            out_npeaks.push_back(chEvt.GetNumberOfPeaks());
+            out_npeaks_specut.push_back(chEvt.GetNumberOfPeaksWithSpecut());
+            
+            
+            out_distancemaxAmppeaks_right.push_back(chEvt.distancesRight);
             //distmaxAmppeaks_left.push_back(chEvt.GetLeftDistanceFromMax());
-            //nphotons_tailInt.push_back(chEvt.GetPhotonCountInTail());
+            out_nphotons_tailInt.push_back(chEvt.GetPhotonCountInTail());
 
-            //peakInt.push_back(chEvt.GetPeakIntegrals()); // returns std::vector<double>
-            //asympeakInt.push_back(chEvt.GetAsymPeakIntegrals());
+            //peaksInt.push_back(chEvt.GetPeakIntegrals()); // returns std::vector<double>
+            //asympeaksInt.push_back(chEvt.GetAsymPeakIntegrals());
             //peakAmp.push_back(chEvt.GetPeakAmplitudes());
             //peak_interdistance.push_back(chEvt.GetPeakInterDistances());
         }
     
-        std::cout<< " fill the tree " << std::endl;
+       
         output_tree->Fill();
 
-        std::cout<< " clear the vectors " << std::endl;
         out_baseline.clear();
         out_pulseInt.clear();
         out_tailInt.clear();
@@ -289,7 +390,8 @@ int main(int argc, char *argv[]){
         out_distmaxAmppeaks_right.clear();
         out_distmaxAmppeaks_left.clear();
         out_nphotons_tailInt.clear();
-        out_peakInt.clear();
+        out_peaksInt.clear();
+        out_distancemaxAmppeaks_right.clear();
         //out_peak_interdistance.clear();
      //eventList.push_back(multiCh);
     } // end loop over events
@@ -306,6 +408,53 @@ int main(int argc, char *argv[]){
     }
 
     std::cout << "Output tree written successfully." << std::endl;
+
+
+    TLegend *leg = new TLegend(0.15, 0.7, 0.3, 0.9);
+    leg->SetFillColor(0);
+    leg->SetBorderSize(0);
+    leg->SetTextSize(0.04); 
+    leg->AddEntry(h_baseline[0], "Channel 0", "l");
+    leg->AddEntry(h_baseline[1], "Channel 1", "l");
+
+
+    TCanvas* c1 = new TCanvas("c1", "c1", 1200, 1000);
+    c1->Divide(3,2);   
+
+    c1->cd(1);
+    h_baseline[0]->Draw();
+    h_baseline[1]->Draw("same");
+    leg->Draw("same");
+
+    c1->cd(2);
+    h_maxAmp[0]->Draw();
+    h_maxAmp[1]->Draw("same");
+    leg->Draw("same");
+
+    
+    c1->cd(3);
+    h_integral[0]->Draw();
+    h_integral[1]->Draw("same");
+    leg->Draw("same");
+
+    c1->cd(4);
+    h_tailInt[0]->Draw();
+    h_tailInt[1]->Draw("same");
+    leg->Draw("same");
+    
+    c1->cd(5);
+    //h_Npeaksperevt[0]->Draw();
+    //h_Npeaksperevt[1]->Draw("same");
+    h_Ngoodpeaksperevt_specut[0]->Draw("");
+    h_Ngoodpeaksperevt_specut[1]->Draw("same");
+    leg->Draw("same");
+    
+
+    c1->cd(6);
+    h_nphotons_tailInt[0]->Draw();
+    h_nphotons_tailInt[1]->Draw("same");
+    leg->Draw("same");
+
 
     app->Run(); // Start the ROOT application event loop
     // Clean up
