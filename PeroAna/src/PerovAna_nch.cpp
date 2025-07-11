@@ -237,7 +237,7 @@ int main(int argc, char *argv[]){
         h_baseline[ich]->SetLineWidth(2);
 
         name = Form("h_maxAmp_ch%d", ich);
-        h_maxAmp.push_back(new TH1F(name, "", 100, 10, 10));
+        h_maxAmp.push_back(new TH1F(name, "", 100, 0, 0.05));
         h_maxAmp[ich]->SetLineColor(colors[ich % colors.size()]);
         h_maxAmp[ich]->SetLineWidth(2);
 
@@ -329,7 +329,7 @@ int main(int argc, char *argv[]){
 
                 
 
-                myevent.FindPeaks(10, 10, 0.05, verbose); // Find peaks in the waveform
+                myevent.FindPeaks(20, 10, 0.05, verbose); // Find peaks in the waveform
                 myevent.AnalyzePeaks(SPE_INTEGRAL, nullptr, nullptr, verbose); // Analyze peaks and compute integrals
                 
                 myevent.FindMainPeak(); // Find the main peak in the waveform
@@ -422,37 +422,72 @@ int main(int argc, char *argv[]){
     c1->Divide(3,2);   
 
     c1->cd(1);
-    h_baseline[0]->Draw();
-    h_baseline[1]->Draw("same");
+    for (size_t i = 0; i < h_baseline.size(); i++) {
+        if (!h_baseline[i]) continue;
+        if (i == 0)
+            h_baseline[i]->Draw();
+        else
+            h_baseline[i]->Draw("same");
+    }
     leg->Draw("same");
+    
 
     c1->cd(2);
-    h_maxAmp[0]->Draw();
-    h_maxAmp[1]->Draw("same");
+    for (size_t i = 0; i < h_maxAmp.size(); i++) {
+        if (!h_maxAmp[i]) continue;
+        if (i == 0)
+            h_maxAmp[i]->Draw();
+        else
+            h_maxAmp[i]->Draw("same");
+    }
     leg->Draw("same");
+    
 
     
     c1->cd(3);
-    h_integral[0]->Draw();
-    h_integral[1]->Draw("same");
-    leg->Draw("same");
-
-    c1->cd(4);
-    h_tailInt[0]->Draw();
-    h_tailInt[1]->Draw("same");
+    for (size_t i = 0; i < h_integral.size(); i++) {
+        if (!h_integral[i]) continue;
+        if (i == 0)
+            h_integral[i]->Draw();
+        else
+            h_integral[i]->Draw("same");
+    }
     leg->Draw("same");
     
+
+    c1->cd(4);
+    for (size_t i = 0; i < h_tailInt.size(); i++) {
+        if (!h_tailInt[i]) continue;
+        if (i == 0)
+            h_tailInt[i]->Draw();
+        else
+            h_tailInt[i]->Draw("same");
+    }
+    leg->Draw("same");
+    
+    
     c1->cd(5);
+    for (size_t i = 0; i < h_Ngoodpeaksperevt_specut.size(); i++) {
+        if (!h_Ngoodpeaksperevt_specut[i]) continue;
+        if (i == 0)
+            h_Ngoodpeaksperevt_specut[i]->Draw();
+        else
+            h_Ngoodpeaksperevt_specut[i]->Draw("same");
+    }
+    leg->Draw("same");
     //h_Npeaksperevt[0]->Draw();
     //h_Npeaksperevt[1]->Draw("same");
-    h_Ngoodpeaksperevt_specut[0]->Draw("");
-    h_Ngoodpeaksperevt_specut[1]->Draw("same");
-    leg->Draw("same");
+    
     
 
     c1->cd(6);
-    h_nphotons_tailInt[0]->Draw();
-    h_nphotons_tailInt[1]->Draw("same");
+    for (size_t i = 0; i < h_nphotons_tailInt.size(); i++) {
+        if (!h_nphotons_tailInt[i]) continue;
+        if (i == 0)
+            h_nphotons_tailInt[i]->Draw();
+        else
+            h_nphotons_tailInt[i]->Draw("same");
+    }
     leg->Draw("same");
 
 
