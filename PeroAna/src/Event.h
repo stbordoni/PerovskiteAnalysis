@@ -39,7 +39,7 @@ public:
     //double GetLeftDistanceFromMax() const {return distmaxAmppeaks_left;}
     
     
-    //int GetRightDistanceFromMax() const {return distmaxAmppeaks_right
+    
     //const std::vector<double>* GetWaveform() const; 
     //const std::vector<double>* GetRawWaveform() const; 
     //const std::vector<double>* GetAvgMeanWaveform() const; 
@@ -82,7 +82,7 @@ public:
     double maxAmp;
     int mainPeakIdx; // Index of the main peak in the waveform
     double ToT; 
-    
+
     int ngoodpeaks;
     int ngoodpeaks_specut;
     //int distmaxAmppeaks_right;
@@ -94,6 +94,10 @@ public:
 
     std::vector<double> peakPositions;
     std::vector<double> peakAmplitudes;
+    std::vector<double> goodPeakPositions;
+    std::vector<double> goodPeakAmplitudes;
+    std::vector<double> goodPeakIntegrals;
+
 
     std::vector<double> leftPeakPositions;
     std::vector<double> leftPeakAmplitudes;

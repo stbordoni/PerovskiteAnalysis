@@ -227,6 +227,7 @@ void Event::ComputeTailIntegral(int preSamples)
 
 void Event::FindMainPeak()
 {
+    /*
     if (peakAmplitudes.empty()) {
         mainPeakIdx = -1;
         return;
@@ -242,7 +243,24 @@ void Event::FindMainPeak()
         }
     }
 
-    mainPeakIdx = static_cast<int>(imax);
+    mainPeakIdx = static_cast<int>(imax);*/
+
+
+    mainPeakIdx = -1;
+    maxAmp = -1.;
+
+    if (goodPeakAmplitudes.empty()) {
+        std::cerr << "[FindMainPeak]:  Channel " << channelId << ":  No good peaks found, skipping.\n";
+        return;
+    }
+
+    for (size_t i = 0; i < goodPeakAmplitudes.size(); ++i) {
+        if (goodPeakAmplitudes[i] > maxAmp) {
+            maxAmp = goodPeakAmplitudes[i];
+            mainPeakIdx = static_cast<int>(i);
+        }
+    }
+
 }
 
 
@@ -308,6 +326,8 @@ void Event::AnalyzePeaks(double SPE_INTEGRAL, TH1* h_AsymLocalIntegral, TH1* h_A
 {
     int Nsamples = avgWaveform.size();
 
+    //std::cout << "Found NPeaks: " << peakPositions.size() << std::endl;
+
     for (size_t ip = 0; ip < peakPositions.size(); ++ip) {
         double xp = peakPositions[ip];
         int bin = static_cast<int>(xp + 0.5);
@@ -335,6 +355,12 @@ void Event::AnalyzePeaks(double SPE_INTEGRAL, TH1* h_AsymLocalIntegral, TH1* h_A
 
         if (asymlocalI > SPE_INTEGRAL) {
             ngoodpeaks_specut++;
+
+            // Save only good peaks
+            goodPeakPositions.push_back(xp);
+            goodPeakAmplitudes.push_back(peakAmplitudes[ip]);
+            goodPeakIntegrals.push_back(asymlocalI);
+    
             if (verbose) {
                 std::cout << "Peak at x=" << xp
                           << " passed SPE integral cut: " << asymlocalI << std::endl;
@@ -346,6 +372,9 @@ void Event::AnalyzePeaks(double SPE_INTEGRAL, TH1* h_AsymLocalIntegral, TH1* h_A
             }
         }
     }
+    //std::cout << "[Event::AnalyzePeaks] Found " 
+    //          << goodPeakPositions.size() << " good peaks after SPE integral cut." << std::endl;
+
 }
 
 
@@ -361,18 +390,24 @@ void Event::SeparateLeftRightPeaks(bool verbose)
         return;
     }
 
-    double mainPeakPos = peakPositions[mainPeakIdx];
+    double mainPeakPos = goodPeakPositions[mainPeakIdx];
 
-    for (size_t i = 0; i < peakPositions.size(); ++i) {
+    for (size_t i = 0; i < goodPeakPositions.size(); ++i) {
         if (i == static_cast<size_t>(mainPeakIdx))
             continue;
 
-        if (peakPositions[i] < mainPeakPos) {
-            leftPeakPositions.push_back(peakPositions[i]);
-            leftPeakAmplitudes.push_back(peakAmplitudes[i]);
+        if (goodPeakPositions[i] < mainPeakPos) {
+            leftPeakPositions.push_back(goodPeakPositions[i]);
+            leftPeakAmplitudes.push_back(goodPeakAmplitudes[i]);
         } else {
-            rightPeakPositions.push_back(peakPositions[i]);
-            rightPeakAmplitudes.push_back(peakAmplitudes[i]);
+            rightPeakPositions.push_back(goodPeakPositions[i]);
+            rightPeakAmplitudes.push_back(goodPeakAmplitudes[i]);
+            if (goodPeakPositions[i] < 0){
+                std::cout << "main peak position: " << peakPositions.at(mainPeakIdx) << std::endl;
+                std::cout << "right peak position: " << goodPeakPositions[i] << std::endl;
+                
+            }
+            
         }
     }
     if (verbose) {
@@ -392,6 +427,11 @@ void Event::ComputePeakDistances()
 
     for (const auto& pos : rightPeakPositions) {
         distancesRight.push_back(pos - mainPos);
+        if ((pos - mainPos) <0){
+            std::cout << "main peak position: " << peakPositions.at(mainPeakIdx) << std::endl;
+            std::cout << "right peak position: " << pos << std::endl;
+                
+        }
     }
 }
 

@@ -139,15 +139,20 @@ int main(int argc, char *argv[]){
     std::vector<int> out_npeaks;
     std::vector<double> out_peakMaxAmp;
     std::vector<int> out_npeaks_specut;
-    std::vector<int> out_distmaxAmppeaks_right;
-    std::vector<int> out_distmaxAmppeaks_left;
+    std::vector<int> out_NPeaks_left;
+    std::vector<int> out_NPeaks_right;
     std::vector<int> out_nphotons_tailInt;
+    
     
 
     // Multi-channel branches (vector-of-vectors: one vector per channel)
     std::vector<std::vector<double>> out_peaksInt;
     std::vector<std::vector<double>> out_asympeaksInt;
     std::vector< std::vector<double> > out_distancemaxAmppeaks_right;
+    std::vector< std::vector<double> > out_distancemaxAmppeaks_left;
+    std::vector< std::vector<double> > out_distmaxAmppeaks_right;
+    std::vector< std::vector<double> > out_distmaxAmppeaks_left;
+
     //std::vector<std::vector<double>> out_peakAmp;
     //std::vector<std::vector<std::vector<double>>> out_peak_interdistance;
 
@@ -158,6 +163,8 @@ int main(int argc, char *argv[]){
     output_tree->Branch("tailInt", &out_tailInt);
     output_tree->Branch("npeaks", &out_npeaks);
     output_tree->Branch("npeaks_specut", &out_npeaks_specut);
+    output_tree->Branch("NPeaks_left", &out_NPeaks_left);
+    output_tree->Branch("NPeaks_right", &out_NPeaks_right);
     output_tree->Branch("distmaxAmppeaks_right", &out_distmaxAmppeaks_right);
     output_tree->Branch("distmaxAmppeaks_left", &out_distmaxAmppeaks_left);
     output_tree->Branch("nphotons_tailInt", &out_nphotons_tailInt);
@@ -165,6 +172,8 @@ int main(int argc, char *argv[]){
     output_tree->Branch("asympeakInt", &out_asympeaksInt);
     output_tree->Branch("peakAmp", &out_peakMaxAmp);
     output_tree->Branch("distancemaxAmppeaks_right", &out_distancemaxAmppeaks_right);
+    output_tree->Branch("distancemaxAmppeaks_left", &out_distancemaxAmppeaks_left);
+
     //output_tree->Branch("peak_interdistance", &out_peak_interdistance);
 
 
@@ -224,11 +233,23 @@ int main(int argc, char *argv[]){
     std::vector<TH1F*> h_Npeaksperevt;
     std::vector<TH1F*> h_Ngoodpeaksperevt_specut;
     std::vector<TH1F*> h_nphotons_tailInt;
+    std::vector<TH1F*> h_NLeftPeaks;
+    std::vector<TH1F*> h_NRightPeaks;
+    std::vector<TH1F*> h_NLeftRightPeaks; // sum of left and right peaks which should be equal to h_Ngoodpeaksperevt_specut;
+
+    // vector of vector of histograms: one vector per channel and one vector of distances per channel
+    std::vector<std::vector<TH1F*>> h_distmaxAmppeaks_right;
+    h_distmaxAmppeaks_right.resize(NChannels);
+
+    
 
     std::vector<int> colors = {kRed, kBlue, kGreen+2, kMagenta, kCyan+2, kOrange+7, kBlack};
+    std::vector <Color_t> color_peaks = {kRed, kOrange, kOrange-3, kOrange-9, kOrange+4};
+
+
 
     //size_t nChannels = channelId->size(); // number of channels in the event
-     for (int ich = 0; ich < 2; ++ich) {
+     for (int ich = 0; ich < NChannels; ++ich) {
         TString name;
 
         name = Form("h_baseline_ch%d", ich);
@@ -279,13 +300,40 @@ int main(int argc, char *argv[]){
         h_nphotons_tailInt.push_back(new TH1F(name, "nphotons tail integral", 50, -0.5, 49.5));
         h_nphotons_tailInt[ich]->SetLineColor(colors[ich % colors.size()]);
         h_nphotons_tailInt[ich]->SetLineWidth(2);
+
+        name = Form("h_NLeftRightPeaks_ch%d", ich);
+        h_NLeftRightPeaks.push_back(new TH1F(name, "N Left + Right Peaks", 5, -0.5, 4.5));
+        h_NLeftRightPeaks[ich]->SetLineColor(colors[ich % colors.size()]);
+        h_NLeftRightPeaks[ich]->SetLineWidth(2);
+
+        name = Form("h_NRightPeaks_ch%d", ich);
+        h_NRightPeaks.push_back(new TH1F(name, "N Left + Right Peaks", 5, -0.5, 4.5));
+        h_NRightPeaks[ich]->SetLineColor(colors[ich % colors.size()]);
+        h_NRightPeaks[ich]->SetLineWidth(2);
+
+        name = Form("h_NLeftPeaks_ch%d", ich);
+        h_NLeftPeaks.push_back(new TH1F(name, "N Left + Right Peaks", 5, -0.5, 4.5));
+        h_NLeftPeaks[ich]->SetLineColor(colors[ich % colors.size()]);
+        h_NLeftPeaks[ich]->SetLineWidth(2);
+
+
+        for (int ip = 0; ip < NmaxRightPeaks; ++ip) {
+            TString name = Form("h_distmaxAmppeaks_right_ch%d_p%d", ich, ip);
+            TString title = Form("Ch %d - Distance of peak %d from main", ich, ip + 1);
+            TH1F* h = new TH1F(name, title,  nSamples, -200, 824); // tune binning as needed
+            h->SetLineColor(colors[ich % color_peaks.size()]);
+            h->SetLineWidth(2);
+            h_distmaxAmppeaks_right[ich].push_back(h);
+        }
+
+          
     }    
 
    
     Long64_t nEntries = eventTree->GetEntries();
 
     for (Long64_t ievt = 0; ievt < nEntries-1; ievt++) {
-    //for (Long64_t ievt = 0; ievt < 5; ievt++) {
+    //for (Long64_t ievt = 0; ievt < 10; ievt++) {
         eventTree->GetEntry(ievt);
 
         //std::cout << "====== EVENT " << ievt+1 << "======" << std::endl;
@@ -345,7 +393,18 @@ int main(int argc, char *argv[]){
                 h_Ngoodpeaksperevt_specut[ich]->Fill(myevent.ngoodpeaks_specut);
                 h_nphotons_tailInt[ich]->Fill(myevent.GetPhotonCountInTail());
                 h_integral[ich]->Fill(myevent.integral);
+                h_NRightPeaks[ich]->Fill(myevent.GetNRightPeaks());
+                h_NLeftPeaks[ich]->Fill(myevent.GetNLeftPeaks());
+                h_NLeftRightPeaks[ich]->Fill(myevent.GetNLeftPeaks() + myevent.GetNRightPeaks());
                 
+                const std::vector<double>& rightdistances = myevent.GetRightDistanceFromMax();
+                for (size_t ip = 0; ip < rightdistances.size(); ++ip) {
+                    if (ip < NmaxRightPeaks) {
+                        h_distmaxAmppeaks_right[ich][ip]->Fill(rightdistances[ip]);
+                    }
+                }
+                
+                //h_distmaxAmppeaks_right[ich] = myevent.GetRightDistanceFromMax();
                 //myevent.FindMaxAmp(); // Find the maximum amplitude in the waveform
 
 
@@ -369,6 +428,12 @@ int main(int argc, char *argv[]){
             out_npeaks_specut.push_back(chEvt.GetNumberOfPeaksWithSpecut());
             
             
+
+            out_NPeaks_left.push_back(chEvt.GetNLeftPeaks());
+            out_NPeaks_right.push_back(chEvt.GetNRightPeaks());
+            //std::cout << "Event " << chEvt.GetEventId() << ", Channel " << chEvt.GetChannelId() << std::endl;
+            //std::cout<< "N Left Peaks: " << chEvt.GetNLeftPeaks() << ", N Right Peaks: " << chEvt.GetNRightPeaks() << std::endl;
+            //std::cout<< "N good peaks with specut: " << chEvt.ngoodpeaks_specut << std::endl;
             out_distancemaxAmppeaks_right.push_back(chEvt.distancesRight);
             //distmaxAmppeaks_left.push_back(chEvt.GetLeftDistanceFromMax());
             out_nphotons_tailInt.push_back(chEvt.GetPhotonCountInTail());
@@ -386,12 +451,16 @@ int main(int argc, char *argv[]){
         out_pulseInt.clear();
         out_tailInt.clear();
         out_npeaks.clear();
+        out_NPeaks_left.clear();
+        out_NPeaks_right.clear();
         out_npeaks_specut.clear();
         out_distmaxAmppeaks_right.clear();
         out_distmaxAmppeaks_left.clear();
         out_nphotons_tailInt.clear();
         out_peaksInt.clear();
         out_distancemaxAmppeaks_right.clear();
+        out_distancemaxAmppeaks_left.clear();
+
         //out_peak_interdistance.clear();
      //eventList.push_back(multiCh);
     } // end loop over events
@@ -467,6 +536,7 @@ int main(int argc, char *argv[]){
     
     
     c1->cd(5);
+    
     for (size_t i = 0; i < h_Ngoodpeaksperevt_specut.size(); i++) {
         if (!h_Ngoodpeaksperevt_specut[i]) continue;
         if (i == 0)
@@ -490,6 +560,116 @@ int main(int argc, char *argv[]){
     }
     leg->Draw("same");
 
+
+
+    TCanvas* c2 = new TCanvas("c2", "Peak analysis", 1200, 1000);
+    c2->Divide(3,1);
+    c2->cd(1);   
+    for (size_t i = 0; i < h_NRightPeaks.size(); i++) {
+        if (!h_NRightPeaks[i]) continue;
+        if (i == 0){
+            h_NRightPeaks[0]->SetTitle("N Right Peaks");
+            h_NRightPeaks[0]->GetXaxis()->SetTitle("N Right Peaks");
+            h_NRightPeaks[0]->GetYaxis()->SetTitle("Counts");
+            h_NRightPeaks[0]->Draw();
+        }
+        else
+            h_NRightPeaks[1]->Draw("same");
+    }    
+    leg->Draw("same");
+
+    c2->cd(2);   
+    for (size_t i = 0; i < h_NLeftPeaks.size(); i++) {
+        if (!h_NLeftPeaks[i]) continue;
+        if (i == 0){
+            h_NLeftPeaks[0]->SetTitle("N Left Peaks");
+            h_NLeftPeaks[0]->GetXaxis()->SetTitle("N Left Peaks");
+            h_NLeftPeaks[0]->GetYaxis()->SetTitle("Counts");
+            h_NLeftPeaks[0]->Draw();
+        }
+        else
+            h_NLeftPeaks[1]->Draw("same");
+    }    
+    leg->Draw("same");
+    
+    c2->cd(3);   
+    for (size_t i = 0; i < h_NLeftRightPeaks.size(); i++) {
+        if (!h_NLeftRightPeaks[i]) continue;
+        if (i == 0){
+            h_NLeftRightPeaks[0]->SetTitle("N Left + Right Peaks");
+            h_NLeftRightPeaks[0]->GetXaxis()->SetTitle("N Left + Right Peaks");
+            h_NLeftRightPeaks[0]->GetYaxis()->SetTitle("Counts");
+            h_NLeftRightPeaks[0]->Draw();
+        }
+        else
+            h_NLeftRightPeaks[1]->Draw("same");
+    }    
+    leg->Draw("same");
+
+
+    //Draw secondary peaks distances
+
+    // find max ip size over all channels
+    size_t n_peaks = 0;
+
+    for (size_t ch = 0; ch < NChannels; ++ch) {
+        n_peaks = std::max(n_peaks, h_distmaxAmppeaks_right[ch].size());
+    }
+
+    // Create a canvas with one pad per peak
+    TCanvas* c3 = new TCanvas("c3", "Peak Distance Distributions", 1200, 800);
+    c3->Divide(ceil(sqrt(n_peaks)), ceil(sqrt(n_peaks))); // square layout
+
+    for (size_t ip = 0; ip < n_peaks; ++ip) {
+        c3->cd(ip+1);
+        
+        TLegend* leg = new TLegend(0.6, 0.7, 0.88, 0.88);
+        leg->SetBorderSize(0);
+        leg->SetFillStyle(0);
+
+        bool firstDrawn = false;
+
+        for (size_t ich = 0; ich < NChannels; ++ich) {
+            // check existence of histogram
+            if (ip >= h_distmaxAmppeaks_right[ich].size()) continue;
+
+            auto* hist = h_distmaxAmppeaks_right[ich][ip];
+            if (!hist) continue;
+
+            hist->SetLineColor(colors[ich % color_peaks.size()]);
+            hist->SetLineWidth(2);
+            hist->SetLineStyle((ich == 1) ? 2 : 1); // channel 1 dotted, others solid
+
+            if (!firstDrawn) {
+                hist->Draw();
+                firstDrawn = true;
+            } else {
+                hist->Draw("same");
+            }
+
+            leg->AddEntry(hist, Form("Channel %zu", ich), "l");
+        }
+
+        leg->Draw();
+    }
+
+    /*
+    for (size_t i = 0; i < h_distmaxAmppeaks_right.size(); i++) {
+        size_t n_peakhistos = h_distmaxAmppeaks_right[i].size();
+        for (size_t ip = 0; ip < n_peakhistos; ++ip) {
+            auto* hist = h_distmaxAmppeaks_right[i][ip];
+            if (!hist) continue;
+            if (i == 0){
+                hist->SetTitle(Form("Distance of peak %lu from main peak", ip + 1));
+                hist->GetXaxis()->SetTitle("Distance (samples)");
+                hist->GetYaxis()->SetTitle("Counts");
+                hist->Draw();
+            } else {
+                hist->SetLineStyle(2);
+                hist->Draw("same");
+            }
+        }
+    }*/
 
     app->Run(); // Start the ROOT application event loop
     // Clean up
