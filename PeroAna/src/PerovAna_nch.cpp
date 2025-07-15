@@ -302,17 +302,17 @@ int main(int argc, char *argv[]){
         h_nphotons_tailInt[ich]->SetLineWidth(2);
 
         name = Form("h_NLeftRightPeaks_ch%d", ich);
-        h_NLeftRightPeaks.push_back(new TH1F(name, "N Left + Right Peaks", 5, -0.5, 4.5));
+        h_NLeftRightPeaks.push_back(new TH1F(name, "N Left + Right Peaks", 15, -0.5, 14.5));
         h_NLeftRightPeaks[ich]->SetLineColor(colors[ich % colors.size()]);
         h_NLeftRightPeaks[ich]->SetLineWidth(2);
 
         name = Form("h_NRightPeaks_ch%d", ich);
-        h_NRightPeaks.push_back(new TH1F(name, "N Left + Right Peaks", 5, -0.5, 4.5));
+        h_NRightPeaks.push_back(new TH1F(name, "N Left + Right Peaks", 15, -0.5, 14.5));
         h_NRightPeaks[ich]->SetLineColor(colors[ich % colors.size()]);
         h_NRightPeaks[ich]->SetLineWidth(2);
 
         name = Form("h_NLeftPeaks_ch%d", ich);
-        h_NLeftPeaks.push_back(new TH1F(name, "N Left + Right Peaks", 5, -0.5, 4.5));
+        h_NLeftPeaks.push_back(new TH1F(name, "N Left + Right Peaks", 15, -0.5, 14.5));
         h_NLeftPeaks[ich]->SetLineColor(colors[ich % colors.size()]);
         h_NLeftPeaks[ich]->SetLineWidth(2);
 
