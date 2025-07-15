@@ -35,7 +35,7 @@ base_name=$(basename -- "$input_file")
 base_name_no_ext="${base_name%.*}"
 
 # Set the output file name with the output directory
-rootfile_path="$rootfile_dir/${base_name_no_ext}_output.root"
+rootfile_path="$rootfile_dir/${base_name_no_ext}_nch_output.root"
 
 
 # Create build directory if not exists
