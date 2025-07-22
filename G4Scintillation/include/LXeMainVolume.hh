@@ -48,6 +48,7 @@ class LXeMainVolume : public G4PVPlacement
 
     G4LogicalVolume* GetLogPhotoCath() { return fPhotocath_log; }
     G4LogicalVolume* GetLogScint() { return fScint_log; }
+    G4LogicalVolume* GetLogSiPM() { return fSipm_log; }
 
     std::vector<G4ThreeVector> GetPmtPositions() { return fPmtPositions; }
 
@@ -78,17 +79,23 @@ class LXeMainVolume : public G4PVPlacement
     //
     G4Box* fScint_box = nullptr;
     G4Box* fHousing_box = nullptr;
+    G4Box* fPDMS_box = nullptr;
+    G4Box* fAg_Box = nullptr;
+    G4Box* fSipm_box = nullptr;
     G4Tubs* fPmt = nullptr;
-    G4Tubs* fPhotocath = nullptr;
+    G4Box* fPhotocath = nullptr; //from G4Tubs
     G4Sphere* fSphere = nullptr;
 
     // Logical volumes
     //
     G4LogicalVolume* fScint_log = nullptr;
     G4LogicalVolume* fHousing_log = nullptr;
+    G4LogicalVolume* fPDMS_log = nullptr;
+    G4LogicalVolume* fAg_log = nullptr;
     G4LogicalVolume* fPmt_log = nullptr;
     G4LogicalVolume* fPhotocath_log = nullptr;
     G4LogicalVolume* fSphere_log = nullptr;
+    G4LogicalVolume* fSipm_log = nullptr;
 
     // Sensitive Detectors positions
     std::vector<G4ThreeVector> fPmtPositions;

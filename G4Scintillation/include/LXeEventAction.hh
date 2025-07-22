@@ -52,16 +52,24 @@ class LXeEventAction : public G4UserEventAction
     void SetEventVerbose(G4int v) { fVerbose = v; }
 
     void SetPMTThreshold(G4int t) { fPMTThreshold = t; }
+    
+    void SetFirstGammaIntDepth(G4double z);
+    G4double GetFirstGammaIntDepth() const;
 
     void SetForceDrawPhotons(G4bool b) { fForcedrawphotons = b; }
     void SetForceDrawNoPhotons(G4bool b) { fForcenophotons = b; }
+    
+    void SetRecordedIntDepth(G4bool val) { fRecordedIntDepth = val; }
+    G4bool GetRecordedIntDepth() const { return fRecordedIntDepth; }
 
     void IncPhotonCount_Scint() { ++fPhotonCount_Scint; }
     void IncPhotonCount_Ceren() { ++fPhotonCount_Ceren; }
     void IncEDep(G4double dep) { fTotE += dep; }
+    void IncSiPMEDep(G4double SiPMdep) { fSiPMTotE += SiPMdep; }
     void IncAbsorption() { ++fAbsorptionCount; }
     void IncBoundaryAbsorption() { ++fBoundaryAbsorptionCount; }
     void IncHitCount(G4int i = 1) { fHitCount += i; }
+    void IncTransmittedPhotons() { ++fTransmittedPhotons; }
 
     void SetEWeightPos(const G4ThreeVector& p) { fEWeightPos = p; }
     void SetReconPos(const G4ThreeVector& p) { fReconPos = p; }
@@ -80,8 +88,10 @@ class LXeEventAction : public G4UserEventAction
     G4int GetPhotonCount_Ceren() const { return fPhotonCount_Ceren; }
     G4int GetHitCount() const { return fHitCount; }
     G4double GetEDep() const { return fTotE; }
+    G4double GetSiPMEDep() const { return fSiPMTotE; }
     G4int GetAbsorptionCount() const { return fAbsorptionCount; }
     G4int GetBoundaryAbsorptionCount() const { return fBoundaryAbsorptionCount; }
+    G4int GetTramsmittedPhotons() const { return fTransmittedPhotons; }
 
     G4ThreeVector GetEWeightPos() { return fEWeightPos; }
     G4ThreeVector GetReconPos() { return fReconPos; }
@@ -109,14 +119,19 @@ class LXeEventAction : public G4UserEventAction
 
     G4bool fForcedrawphotons = false;
     G4bool fForcenophotons = false;
+    G4bool fRecordedIntDepth = false;
+    bool fFirstGammaIntRecorded;
 
     G4int fHitCount = 0;
     G4int fPhotonCount_Scint = 0;
     G4int fPhotonCount_Ceren = 0;
     G4int fAbsorptionCount = 0;
     G4int fBoundaryAbsorptionCount = 0;
+    G4int fTransmittedPhotons = 0;
 
     G4double fTotE = 0.;
+    G4double fSiPMTotE = 0;
+    G4double fFirstGammaIntDepth;
 
     // These only have meaning if totE > 0
     // If totE = 0 then these won't be set by EndOfEventAction

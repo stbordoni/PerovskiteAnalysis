@@ -54,9 +54,9 @@ void LXeHistoManager::Book()
   // Define histogram indices, titles
 
   // Default values (to be reset via /analysis/h1/set command)
-  G4int nbins = 100;
+  G4int nbins = 250;
   G4double vmin = 0.;
-  G4double vmax = 100.;
+  G4double vmax = 1000.;
 
   // 0
   analysisManager->CreateH1("0", "dummy", nbins, vmin, vmax);
@@ -76,10 +76,39 @@ void LXeHistoManager::Book()
                             vmin, vmax);
   // 7
   analysisManager->CreateH1("E dep", "energy deposition in scintillator per event", nbins, vmin,
+                            vmax); 
+  // 8
+  analysisManager->CreateH1("Detected Photons", "photons hitting SiPM per event", nbins, vmin,
+                            vmax);                                                    
+  // 9
+  analysisManager->CreateH1("Interaction Types", "types of interactions of incident radiation", 6, vmin,
+                            6); 
+  // 10
+  analysisManager->CreateH1("Photoelectric Depth", "depth of photoelectric effect interactions", 40, -3,
+                            3);
+  // 11
+  analysisManager->CreateH1("Generated to Detected", "ratio of detected photons to generated photons", 100, vmin,
+                            1);
+  // 12
+  analysisManager->CreateH1("SiPM E dep", "energy deposited in SiPM per event", nbins, vmin,
                             vmax);
-
-  // Create all histograms as inactivated
+  // 13
+  analysisManager->CreateH1("Photon E dep", "energy deposited by each photon in SiPM", 100, vmin,
+                            5);
+  // 14
+  analysisManager->CreateH1("Generated to Absorbed", "ratio of absorbed photons to generated photons", 100, vmin,
+                            1);
+  // 0
+  analysisManager->CreateH2("Interaction Types and Energies", "Interaction Type vs Energy", nbins, vmin, vmax, 6, vmin, 
+                            6);
+  // 1
+  analysisManager->CreateH2("Depth and Production", "Interaction Depth vs Number of Photons Produced", 50, -3, 3, nbins, vmin, 
+                            vmax);
+// 2
+  analysisManager->CreateH2("Depth and Edep", "Interaction Depth vs Energy Deposition", 50, -3, 3, nbins, vmin, 
+                            vmax);
+  // Create all histograms as activated
   for (G4int i = 0; i < analysisManager->GetNofH1s(); ++i) {
-    analysisManager->SetH1Activation(i, false);
+    analysisManager->SetH1Activation(i, true);
   }
 }

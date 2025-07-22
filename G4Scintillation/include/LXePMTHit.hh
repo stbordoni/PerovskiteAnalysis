@@ -92,4 +92,5 @@ inline void LXePMTHit::operator delete(void* aHit)
   LXePMTHitAllocator->FreeSingle((LXePMTHit*)aHit);
 }
 
+
 #endif

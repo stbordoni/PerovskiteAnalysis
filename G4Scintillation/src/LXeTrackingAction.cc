@@ -68,14 +68,14 @@ void LXeTrackingAction::PostUserTrackingAction(const G4Track* aTrack)
     }
 
     if (LXeDetectorConstruction::GetSphereOn()) {
-      if ((trackInformation->GetTrackStatus() & hitPMT)
+      if ((trackInformation->GetTrackStatus() & hitSiPM) // was hitPMT
           && (trackInformation->GetTrackStatus() & hitSphere))
       {
         trajectory->SetDrawTrajectory(true);
       }
     }
     else {
-      if (trackInformation->GetTrackStatus() & hitPMT) trajectory->SetDrawTrajectory(true);
+      if (trackInformation->GetTrackStatus() & hitSiPM) trajectory->SetDrawTrajectory(true); // was hitPMT
     }
   }
   // draw all other (not optical photon) trajectories

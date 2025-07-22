@@ -31,7 +31,6 @@
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 
 #include "LXeRun.hh"
-
 #include "G4SystemOfUnits.hh"
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
@@ -52,6 +51,8 @@ void LXeRun::Merge(const G4Run* run)
   fAbsorptionCount2 += localRun->fAbsorptionCount2;
   fBoundaryAbsorptionCount += localRun->fBoundaryAbsorptionCount;
   fBoundaryAbsorptionCount2 += localRun->fBoundaryAbsorptionCount2;
+  fTransmittedPhotons += localRun->fTransmittedPhotons;
+  fTransmittedPhotons2 += localRun->fTransmittedPhotons2;
   fTotE += localRun->fTotE;
   fTotE2 += localRun->fTotE2;
 
@@ -142,6 +143,17 @@ void LXeRun::EndOfRun()
 
   G4cout << "Total energy deposition in scintillator per event:\t " << en / keV << " +- "
          << rms_en / keV << " keV." << G4endl;
+
+  G4double trans = G4double(fTransmittedPhotons) / n_evt;
+  G4double trans2 = G4double(fTransmittedPhotons2) / n_evt;
+  G4double rms_trans = trans2 - trans * trans;
+  if (rms_trans > 0.)
+    rms_trans = std::sqrt(rms_trans / n_evt);
+  else
+    rms_trans = 0.;
+
+  G4cout << "Number of detected photons per event :\t " << trans << " +- " << rms_trans
+         << G4endl;
 
   G4cout << G4endl;
   G4cout.precision(prec);

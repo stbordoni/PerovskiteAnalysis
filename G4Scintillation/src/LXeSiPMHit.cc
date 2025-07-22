@@ -24,58 +24,48 @@
 // ********************************************************************
 //
 //
-/// \file optical/LXe/src/LXeRunAction.cc
-/// \brief Implementation of the LXeRunAction class
+/// \file optical/LXe/src/LXeSiPMHit.cc
+/// \brief Implementation of the LXeSiPMHit class
 //
 //
-#include "LXeRunAction.hh"
+#include "LXeSiPMHit.hh"
 
-#include "LXeHistoManager.hh"
-#include "LXeRun.hh"
+#include "G4Colour.hh"
+#include "G4LogicalVolume.hh"
+#include "G4VPhysicalVolume.hh"
+#include "G4VVisManager.hh"
+#include "G4VisAttributes.hh"
+#include "G4ios.hh"
+
+G4ThreadLocal G4Allocator<LXeSiPMHit>* LXeSiPMHitAllocator = nullptr;
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 
-LXeRunAction::LXeRunAction()
+LXeSiPMHit::LXeSiPMHit(G4VPhysicalVolume* pVol) : fPhysVol(pVol) {}
+
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
+
+LXeSiPMHit::LXeSiPMHit(const LXeSiPMHit& right) : G4VHit()
 {
-  // Book predefined histograms
-  fHistoManager = new LXeHistoManager();
+  fSiPMEdep = right.fSiPMEdep;
+  fPhotonCount = right.fPhotonCount;
+  fPhysVol = right.fPhysVol;
 }
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 
-LXeRunAction::~LXeRunAction()
+const LXeSiPMHit& LXeSiPMHit::operator=(const LXeSiPMHit& right)
 {
-  delete fHistoManager;
-}
-
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-G4Run* LXeRunAction::GenerateRun()
-{
-  fRun = new LXeRun();
-  return fRun;
+  fSiPMEdep = right.fSiPMEdep;
+  fPhotonCount = right.fPhotonCount;
+  fPhysVol = right.fPhysVol;
+  return *this;
 }
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 
-void LXeRunAction::BeginOfRunAction(const G4Run*)
+G4bool LXeSiPMHit::operator==(const LXeSiPMHit&) const
 {
-  G4AnalysisManager* analysisManager = G4AnalysisManager::Instance();
-  analysisManager->SetFileName("myhistos");
-  if (analysisManager->IsActive()) {
-    analysisManager->OpenFile("myhistos");
-  }
-}
-
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-
-void LXeRunAction::EndOfRunAction(const G4Run*)
-{
-  if (isMaster) fRun->EndOfRun();
-
-  // save histograms
-  G4AnalysisManager* analysisManager = G4AnalysisManager::Instance();
-  if (analysisManager->IsActive()) {
-    analysisManager->Write();
-    analysisManager->CloseFile();
-  }
+  return false;
+  // returns false because there currently isn't need to check for equality
 }

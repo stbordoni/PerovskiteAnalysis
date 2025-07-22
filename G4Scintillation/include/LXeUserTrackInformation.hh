@@ -37,6 +37,7 @@ enum LXeTrackStatus
 {
   active = 1,
   hitPMT = 2,
+  hitSiPM = 2,
   absorbed = 4,
   boundaryAbsorbed = 8,
   hitSphere = 16,

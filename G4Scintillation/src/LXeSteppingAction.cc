@@ -32,10 +32,13 @@
 
 #include "LXeEventAction.hh"
 #include "LXePMTSD.hh"
+#include "LXeSiPMSD.hh"
 #include "LXeSteppingMessenger.hh"
 #include "LXeTrajectory.hh"
 #include "LXeUserTrackInformation.hh"
 
+#include "G4AnalysisManager.hh"
+#include "G4Gamma.hh"
 #include "G4OpticalPhoton.hh"
 #include "G4ProcessManager.hh"
 #include "G4SDManager.hh"
@@ -81,7 +84,7 @@ void LXeSteppingAction::UserSteppingAction(const G4Step* theStep)
   G4OpBoundaryProcessStatus boundaryStatus = Undefined;
 
   // find the boundary process only once
-  if (nullptr == fBoundary && pdg == -22) {
+  if (nullptr == fBoundary && part == G4OpticalPhoton::Definition()) {
     G4ProcessManager* pm = part->GetProcessManager();
     G4int nprocesses = pm->GetProcessListLength();
     G4ProcessVector* pv = pm->GetProcessList();
@@ -124,15 +127,54 @@ void LXeSteppingAction::UserSteppingAction(const G4Step* theStep)
     fExpectedNextStatus = Undefined;
     return;
   }
+  const G4ParticleDefinition* particle = theTrack->GetDefinition();
+  if (particle == G4Gamma::Definition()) {
+    if (thePrePV->GetName() == "scintillator"){
+      G4String procName = thePostPoint->GetProcessDefinedStep()->GetProcessName();
+      G4int binIndex = -1;
+      G4double edep = theStep->GetTotalEnergyDeposit();
+      if (edep > 0.) {
+        const G4VProcess* process = thePostPoint->GetProcessDefinedStep();
+        if (process) {
+          if (procName == "compt") { 
+            binIndex = 0;            // Compton scattering
+          }
+          else if (procName == "Rayl") {
+            binIndex = 1;            // Rayleigh scattering
+          }
+          else if (procName == "phot") {
+            binIndex = 2;            // photoelectric effect
+          }
+          else if (procName == "conv") {
+            binIndex = 3;            // pair production
+          }
+          else if (procName == "eIoni") {
+            binIndex = 4;            // electron ionization
+          }
+          else if (procName == "Transportation") {
+            binIndex = -2;           // transportation
+          }
+          else binIndex = 5;                                 // Misc
+          if (binIndex >= 0) { // skip Transportation and unclassified
+            auto analysisManager = G4AnalysisManager::Instance();
+            analysisManager->FillH1(9, binIndex);
+            analysisManager->FillH2(0, edep * 1000., binIndex);
+          }
+        }
+      }
+    }
+  }
 
   // Optical photon only
-  if (pdg == -22) {
-    if (thePrePV->GetName() == "Slab")
+  if (theTrack->GetDefinition() == G4OpticalPhoton::Definition()) { // changed from pdg == -22
+    if (thePrePV->GetName() == "Slab") {
       // force drawing of photons in WLS slab
       trackInformation->SetForceDrawTrajectory(true);
-    else if (thePostPV->GetName() == "expHall")
+    }
+    else if (thePostPV->GetName() == "expHall") {
       // Kill photons entering expHall from something other than Slab
       theTrack->SetTrackStatus(fStopAndKill);
+    }
 
     // Was the photon absorbed by the absorption process
     auto proc = thePostPoint->GetProcessDefinedStep();
@@ -141,6 +183,12 @@ void LXeSteppingAction::UserSteppingAction(const G4Step* theStep)
       trackInformation->AddTrackStatusFlag(absorbed);
     }
     if (nullptr != fBoundary) boundaryStatus = fBoundary->GetStatus();
+
+    // Did the photon hit the SiPM?
+    //if (thePrePV->GetName() == "scintillator" && thePostPV->GetName() == "SiPM" && boundaryStatus == Detection) {
+    //fEventAction->IncTransmittedPhotons();
+    //theTrack->SetTrackStatus(fStopAndKill);
+    //}
 
     if (thePostPoint->GetStepStatus() == fGeomBoundary) {
       // Check to see if the particle was actually at a boundary
@@ -163,6 +211,7 @@ void LXeSteppingAction::UserSteppingAction(const G4Step* theStep)
       fExpectedNextStatus = Undefined;
       switch (boundaryStatus) {
         case Absorption:
+          //G4cout << "Absorption!" << G4endl;
           trackInformation->AddTrackStatusFlag(boundaryAbsorbed);
           fEventAction->IncBoundaryAbsorption();
           break;
@@ -172,11 +221,18 @@ void LXeSteppingAction::UserSteppingAction(const G4Step* theStep)
         {
           // Trigger sensitive detector manually since photon is
           // absorbed but status was Detection
+          //G4cout << "Detection!" << G4endl;
+          fEventAction->IncTransmittedPhotons();
           G4SDManager* SDman = G4SDManager::GetSDMpointer();
-          G4String sdName = "/LXeDet/pmtSD";
-          LXePMTSD* pmtSD = (LXePMTSD*)SDman->FindSensitiveDetector(sdName);
-          if (pmtSD) pmtSD->ProcessHits_boundary(theStep, nullptr);
-          trackInformation->AddTrackStatusFlag(hitPMT);
+          G4String sdName = "/LXeDet/sipmSD";
+          LXeSiPMSD* sipmSD = (LXeSiPMSD*)SDman->FindSensitiveDetector(sdName);
+          if (sipmSD) sipmSD->ProcessHits_boundary(theStep, nullptr);
+          trackInformation->AddTrackStatusFlag(hitSiPM); // was hitPMT
+          G4double photonEnergy = theTrack->GetTotalEnergy();
+          //G4double photonEnergy = theStep->GetPreStepPoint()->GetKineticEnergy();
+          auto analysisManager = G4AnalysisManager::Instance();
+          analysisManager->FillH1(13, photonEnergy * 1000000.);
+          //G4cout << "\tPhoton energy: " << photonEnergy << G4endl;
           break;
         }
         case FresnelReflection:
@@ -192,6 +248,35 @@ void LXeSteppingAction::UserSteppingAction(const G4Step* theStep)
           break;
       }
       if (thePostPV->GetName() == "sphere") trackInformation->AddTrackStatusFlag(hitSphere);
+    }
+  }
+  
+  // Record depth of first interaction in scintillator
+  //const G4ParticleDefinition* particle = theTrack->GetDefinition();
+  if (particle == G4Gamma::Definition()) {
+    G4String procName = thePostPoint->GetProcessDefinedStep()->GetProcessName();
+    if (procName == "phot"){
+      G4double z = theStep->GetPreStepPoint()->GetPosition().z();
+      G4AnalysisManager::Instance()->FillH1(10, z);
+    }
+    if (!fEventAction->GetRecordedIntDepth()) {
+      //if (thePrePV->GetName() == "scintillator") {
+        const G4VProcess* process = theStep->GetPostStepPoint()->GetProcessDefinedStep();
+        G4double edep = theStep->GetTotalEnergyDeposit();
+        if (edep > 0) {
+          G4double z = theStep->GetPreStepPoint()->GetPosition().z();
+          //G4cout << "\tInteraction Depth: " << z << G4endl;
+          //G4cout << "\tInteraction type: " << procName << G4endl;
+          fEventAction->SetFirstGammaIntDepth(z);
+          fEventAction->SetRecordedIntDepth(true);
+          G4AnalysisManager::Instance()->FillH2(2, z, edep); 
+        }
+      //if (thePrePV->GetName() == "pdms_phys") {
+      //  G4double z = 8.;
+      //  fEventAction->SetFirstGammaIntDepth(z + 1.36);
+      //  fEventAction->SetRecordedIntDepth(true);
+      //}
+      //}
     }
   }
 }

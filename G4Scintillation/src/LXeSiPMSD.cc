@@ -24,14 +24,14 @@
 // ********************************************************************
 //
 //
-/// \file optical/LXe/src/LXePMTSD.cc
-/// \brief Implementation of the LXePMTSD class
+/// \file optical/LXe/src/LXeSiPMSD.cc
+/// \brief Implementation of the LXeSiPMSD class
 //
 //
-#include "LXePMTSD.hh"
+#include "LXeSiPMSD.hh"
+#include "LXeSiPMHit.hh"
 
 #include "LXeDetectorConstruction.hh"
-#include "LXePMTHit.hh"
 #include "LXeUserTrackInformation.hh"
 
 #include "G4LogicalVolume.hh"
@@ -42,94 +42,84 @@
 #include "G4TouchableHistory.hh"
 #include "G4Track.hh"
 #include "G4VPhysicalVolume.hh"
+#include "G4VProcess.hh"
 #include "G4VTouchable.hh"
 #include "G4ios.hh"
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 
-LXePMTSD::LXePMTSD(G4String name) : G4VSensitiveDetector(name)
+LXeSiPMSD::LXeSiPMSD(G4String name) : G4VSensitiveDetector(name)
 {
-  collectionName.insert("pmtHitCollection");
+  collectionName.insert("sipmCollection");
 }
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-
-LXePMTSD::~LXePMTSD()
+void LXeSiPMSD::Initialize(G4HCofThisEvent* hitsCE)
 {
-  delete fPMTPositionsX;
-  delete fPMTPositionsY;
-  delete fPMTPositionsZ;
-}
+  fSiPMCollection = new LXeSiPMHitsCollection(SensitiveDetectorName, collectionName[0]);
 
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-
-void LXePMTSD::SetPmtPositions(const std::vector<G4ThreeVector>& positions)
-{
-  for (size_t i = 0; i < positions.size(); ++i) {
-    if (fPMTPositionsX) fPMTPositionsX->push_back(positions[i].x());
-    if (fPMTPositionsY) fPMTPositionsY->push_back(positions[i].y());
-    if (fPMTPositionsZ) fPMTPositionsZ->push_back(positions[i].z());
+  if (fHitsCID < 0) {
+    fHitsCID = G4SDManager::GetSDMpointer()->GetCollectionID(fSiPMCollection);
   }
+  hitsCE->AddHitsCollection(fHitsCID, fSiPMCollection);
 }
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 
-void LXePMTSD::Initialize(G4HCofThisEvent* hitsCE)
+G4bool LXeSiPMSD::ProcessHits(G4Step* aStep, G4TouchableHistory*)
 {
-  fPMTHitCollection = new LXePMTHitsCollection(SensitiveDetectorName, collectionName[0]);
+  G4double SiPMedep = aStep->GetTotalEnergyDeposit();
+  if (SiPMedep == 0.) return false;  // No edep so don't count as hit
 
-  if (fHitCID < 0) {
-    fHitCID = G4SDManager::GetSDMpointer()->GetCollectionID(fPMTHitCollection);
-  }
-  hitsCE->AddHitsCollection(fHitCID, fPMTHitCollection);
+  G4StepPoint* thePrePoint = aStep->GetPreStepPoint();
+  auto theTouchable = (G4TouchableHistory*)(aStep->GetPreStepPoint()->GetTouchable());
+  G4VPhysicalVolume* thePrePV = theTouchable->GetVolume();
+
+  G4StepPoint* thePostPoint = aStep->GetPostStepPoint();
+
+  auto sipmHit = new LXeSiPMHit(thePrePV);
+
+  sipmHit->SetSiPMEdep(SiPMedep);
+
+  fSiPMCollection->insert(sipmHit);
+
+  return true;
 }
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 
-G4bool LXePMTSD::ProcessHits(G4Step* aStep, G4TouchableHistory*)
-{
-  return false;
-}
-
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-
-// Generates a hit and uses the postStepPoint's mother volume replica number
-// PostStepPoint because the hit is generated manually when the photon is
-// absorbed by the photocathode
-
-G4bool LXePMTSD::ProcessHits_boundary(const G4Step* aStep, G4TouchableHistory*)
+G4bool LXeSiPMSD::ProcessHits_boundary(const G4Step* aStep, G4TouchableHistory*)
 {
   // need to know if this is an optical photon
   if (aStep->GetTrack()->GetDefinition() != G4OpticalPhoton::OpticalPhotonDefinition())
     return false;
 
-  // User replica number 1 since photocathode is a daughter volume
-  // to the pmt which was replicated
-  G4int pmtNumber = aStep->GetPostStepPoint()->GetTouchable()->GetReplicaNumber(1);
+  // User number 1 since we only have one SiPM
+  G4int SiPMNumber = 1;
   G4VPhysicalVolume* physVol = aStep->GetPostStepPoint()->GetTouchable()->GetVolume(1);
 
   // Find the correct hit collection
-  size_t n = fPMTHitCollection->entries();
-  LXePMTHit* hit = nullptr;
+  size_t n = fSiPMCollection->entries();
+  LXeSiPMHit* hit = nullptr;
   for (size_t i = 0; i < n; ++i) {
-    if ((*fPMTHitCollection)[i]->GetPMTNumber() == pmtNumber) {
-      hit = (*fPMTHitCollection)[i];
+    if ((*fSiPMCollection)[i]->GetSiPMNumber() == SiPMNumber) {
+      hit = (*fSiPMCollection)[i];
       break;
     }
   }
 
-  if (hit == nullptr) {  // this pmt wasn't previously hit in this event
-    hit = new LXePMTHit();  // so create new hit
-    hit->SetPMTNumber(pmtNumber);
-    hit->SetPMTPhysVol(physVol);
-    fPMTHitCollection->insert(hit);
-    hit->SetPMTPos((*fPMTPositionsX)[pmtNumber], (*fPMTPositionsY)[pmtNumber],
-                   (*fPMTPositionsZ)[pmtNumber]);
+  if (hit == nullptr) {  // the SiPM wasn't previously hit in this event
+    hit = new LXeSiPMHit();  // so create new hit
+    hit->SetSiPMNumber(SiPMNumber);
+    hit->SetSiPMPhysVol(physVol);
+    fSiPMCollection->insert(hit);
+    //hit->SetSiPMPos((*fSiPMPositionsX)[pmtNumber], (*fPMTPositionsY)[pmtNumber],
+    //               (*fPMTPositionsZ)[pmtNumber]);
   }
 
-  hit->IncPhotonCount();  // increment hit for the selected pmt
+  hit->IncSiPMPhotonCount();  // increment hit for the selected SiPM
 
-  if (!LXeDetectorConstruction::GetSphereOn()) {
+  /*if (!LXeDetectorConstruction::GetSphereOn()) {
     hit->SetDrawit(true);
     // If the sphere is disabled then this hit is automaticaly drawn
   }
@@ -138,7 +128,7 @@ G4bool LXePMTSD::ProcessHits_boundary(const G4Step* aStep, G4TouchableHistory*)
     if (trackInfo->GetTrackStatus() & hitSphere)
       // only draw this hit if the photon has hit the sphere first
       hit->SetDrawit(true);
-  }
+  }*/
 
   return true;
 }

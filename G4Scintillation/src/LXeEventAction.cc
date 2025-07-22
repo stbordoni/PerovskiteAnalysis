@@ -35,6 +35,7 @@
 #include "LXePMTHit.hh"
 #include "LXeRun.hh"
 #include "LXeScintHit.hh"
+#include "LXeSiPMHit.hh"
 #include "LXeTrajectory.hh"
 
 #include "G4Event.hh"
@@ -71,7 +72,13 @@ void LXeEventAction::BeginOfEventAction(const G4Event*)
   fPhotonCount_Ceren = 0;
   fAbsorptionCount = 0;
   fBoundaryAbsorptionCount = 0;
+  fTransmittedPhotons = 0;
   fTotE = 0.0;
+  fSiPMTotE = 0.0;
+  
+  fRecordedIntDepth = false;
+  fFirstGammaIntDepth = 100.0;
+  fFirstGammaIntRecorded = false;
 
   fConvPosSet = false;
   fEdepMax = 0.0;
@@ -81,6 +88,19 @@ void LXeEventAction::BeginOfEventAction(const G4Event*)
   G4SDManager* SDman = G4SDManager::GetSDMpointer();
   if (fScintCollID < 0) fScintCollID = SDman->GetCollectionID("scintCollection");
   if (fPMTCollID < 0) fPMTCollID = SDman->GetCollectionID("pmtHitCollection");
+}
+
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
+
+void LXeEventAction::SetFirstGammaIntDepth(G4double z) {
+  if (!fFirstGammaIntRecorded) {
+    fFirstGammaIntDepth = z;
+    fFirstGammaIntRecorded = true;
+  }
+}
+
+G4double LXeEventAction::GetFirstGammaIntDepth() const {
+  return fFirstGammaIntDepth;
 }
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
@@ -106,6 +126,7 @@ void LXeEventAction::EndOfEventAction(const G4Event* anEvent)
 
   LXeScintHitsCollection* scintHC = nullptr;
   LXePMTHitsCollection* pmtHC = nullptr;
+  LXeSiPMHitsCollection* sipmHC = nullptr;
   G4HCofThisEvent* hitsCE = anEvent->GetHCofThisEvent();
 
   // Get the hit collections
@@ -137,7 +158,7 @@ void LXeEventAction::EndOfEventAction(const G4Event* anEvent)
       }
     }
 
-    G4AnalysisManager::Instance()->FillH1(7, fTotE);
+    G4AnalysisManager::Instance()->FillH1(7, fTotE * 1000.);
 
     if (fTotE == 0.) {
       if (fVerbose > 0) G4cout << "No hits in the scintillator this event." << G4endl;
@@ -158,6 +179,7 @@ void LXeEventAction::EndOfEventAction(const G4Event* anEvent)
   if (pmtHC) {
     G4ThreeVector reconPos(0., 0., 0.);
     size_t pmts = pmtHC->entries();
+    G4double SiPMedep;
     // Gather info from all PMTs
     for (size_t i = 0; i < pmts; ++i) {
       fHitCount += (*pmtHC)[i]->GetPhotonCount();
@@ -170,6 +192,8 @@ void LXeEventAction::EndOfEventAction(const G4Event* anEvent)
       }
     }
 
+
+    //G4AnalysisManager::Instance()->FillH1(12, fSiPMTotE * 1000.);
     G4AnalysisManager::Instance()->FillH1(1, fHitCount);
     G4AnalysisManager::Instance()->FillH1(2, fPMTsAboveThreshold);
 
@@ -183,10 +207,40 @@ void LXeEventAction::EndOfEventAction(const G4Event* anEvent)
     pmtHC->DrawAllHits();
   }
 
+  // Hits in SiPM
+  if (sipmHC) {
+    size_t n_hit = sipmHC->entries();
+    G4double SiPMedep;
+
+    for (size_t i = 0; i < n_hit; ++i) {  // gather info on hits in scintillator
+      SiPMedep = (*sipmHC)[i]->GetSiPMEdep();
+      fSiPMTotE += SiPMedep;
+    }
+
+    G4AnalysisManager::Instance()->FillH1(12, fSiPMTotE * 1000.);
+
+    if (fTotE == 0.) {
+      if (fVerbose > 0) G4cout << "No hits in the scintillator this event." << G4endl;
+    }
+    if (fVerbose > 0) {
+      G4cout << "\tTotal energy deposition in SiPM : " << fSiPMTotE / keV << " (keV)" << G4endl;
+    }
+  }
+
+  if (fFirstGammaIntDepth < 99.) {
+    G4AnalysisManager::Instance()->FillH2(1, fFirstGammaIntDepth, fPhotonCount_Scint); 
+  } 
   G4AnalysisManager::Instance()->FillH1(3, fPhotonCount_Scint);
   G4AnalysisManager::Instance()->FillH1(4, fPhotonCount_Ceren);
   G4AnalysisManager::Instance()->FillH1(5, fAbsorptionCount);
   G4AnalysisManager::Instance()->FillH1(6, fBoundaryAbsorptionCount);
+  G4AnalysisManager::Instance()->FillH1(8, fTransmittedPhotons);
+  if (fPhotonCount_Scint > 0) {
+    G4double DetectionEfficiency = fTransmittedPhotons * 1.0 / fPhotonCount_Scint;
+    G4AnalysisManager::Instance()->FillH1(11, DetectionEfficiency);
+    G4double AbsorptionEfficiency = fAbsorptionCount * 1.0 / fPhotonCount_Scint;
+    G4AnalysisManager::Instance()->FillH1(14, AbsorptionEfficiency);
+  }
 
   if (fVerbose > 0) {
     // End of event output. later to be controlled by a verbose level
@@ -214,9 +268,11 @@ void LXeEventAction::EndOfEventAction(const G4Event* anEvent)
   run->IncPhotonCount_Scint(fPhotonCount_Scint);
   run->IncPhotonCount_Ceren(fPhotonCount_Ceren);
   run->IncEDep(fTotE);
+  run->IncSiPMEDep(fSiPMTotE);
   run->IncAbsorption(fAbsorptionCount);
   run->IncBoundaryAbsorption(fBoundaryAbsorptionCount);
   run->IncHitsAboveThreshold(fPMTsAboveThreshold);
+  run->IncTransmittedPhotons(fTransmittedPhotons);
 
   // If we have set the flag to save 'special' events, save here
   if (fPhotonCount_Scint + fPhotonCount_Ceren < fDetector->GetSaveThreshold()) {

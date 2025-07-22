@@ -41,6 +41,7 @@
 class LXeMainVolume;
 class LXePMTSD;
 class LXeScintSD;
+class LXeSiPMSD;
 
 class G4Box;
 class G4Element;
@@ -114,8 +115,15 @@ class LXeDetectorConstruction : public G4VUserDetectorConstruction
     G4Element* fO = nullptr;
     G4Element* fC = nullptr;
     G4Element* fH = nullptr;
+    G4Element* fPb = nullptr;
+    G4Element* fBr = nullptr;
+    G4Element* fSi = nullptr;
     G4Material* fLXe = nullptr;
+    G4Material* fPer = nullptr;
+    G4Material* fPDMS = nullptr;
+    G4Material* fAg = nullptr;
     G4Material* fAl = nullptr;
+    G4Material* fSiPM = nullptr;
     G4Material* fAir = nullptr;
     G4Material* fVacuum = nullptr;
     G4Material* fGlass = nullptr;
@@ -123,7 +131,7 @@ class LXeDetectorConstruction : public G4VUserDetectorConstruction
     G4Material* fPMMA = nullptr;
     G4Material* fPethylene1 = nullptr;
     G4Material* fPethylene2 = nullptr;
-
+ 
     // Geometry
     G4double fScint_x = 17.8 * CLHEP::cm;
     G4double fScint_y = 17.8 * CLHEP::cm;
@@ -144,11 +152,16 @@ class LXeDetectorConstruction : public G4VUserDetectorConstruction
     LXeMainVolume* fMainVolume = nullptr;
 
     G4MaterialPropertiesTable* fLXe_mt = nullptr;
+    G4MaterialPropertiesTable* fPDMS_mt = nullptr;
+    G4MaterialPropertiesTable* fAg_mt = nullptr;
+    G4MaterialPropertiesTable* fSiPM_mt = nullptr;
     G4MaterialPropertiesTable* fMPTPStyrene = nullptr;
+    G4MaterialPropertiesTable* fAir_mt = nullptr;
 
     // Sensitive Detectors
     G4Cache<LXeScintSD*> fScint_SD;
     G4Cache<LXePMTSD*> fPmt_SD;
+    G4Cache<LXeSiPMSD*> fSiPM_SD;
 };
 
 #endif

@@ -59,6 +59,11 @@ class LXeRun : public G4Run
       fTotE += dep;
       fTotE2 += dep * dep;
     }
+    void IncSiPMEDep(G4double SiPMdep)
+    {
+      fSiPMTotE += SiPMdep;
+      fSiPMTotE2 += SiPMdep * SiPMdep;
+    }
     void IncAbsorption(G4int count)
     {
       fAbsorptionCount += count;
@@ -79,7 +84,12 @@ class LXeRun : public G4Run
       fPMTsAboveThreshold += count;
       fPMTsAboveThreshold2 += count * count;
     }
-
+    void IncTransmittedPhotons(G4int count)
+    {
+      fTransmittedPhotons += count;
+      fTransmittedPhotons2 += count * count;
+    }
+  
     void Merge(const G4Run* run) override;
 
     void EndOfRun();
@@ -97,9 +107,13 @@ class LXeRun : public G4Run
     G4int fBoundaryAbsorptionCount2 = 0;
     G4int fPMTsAboveThreshold = 0;
     G4int fPMTsAboveThreshold2 = 0;
+    G4int fTransmittedPhotons = 0;
+    G4int fTransmittedPhotons2 = 0;
 
     G4double fTotE = 0.;
     G4double fTotE2 = 0.;
+    G4double fSiPMTotE = 0.;
+    G4double fSiPMTotE2 = 0.;
 };
 
 #endif  // LXeRun_h

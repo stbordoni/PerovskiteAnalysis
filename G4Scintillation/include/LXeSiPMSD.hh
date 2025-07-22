@@ -24,58 +24,32 @@
 // ********************************************************************
 //
 //
-/// \file optical/LXe/src/LXeRunAction.cc
-/// \brief Implementation of the LXeRunAction class
+/// \file optical/LXe/include/LXeSiPMSD.hh
+/// \brief Definition of the LXeSiPMSD class
 //
 //
-#include "LXeRunAction.hh"
+#ifndef LXeSiPMSD_h
+#define LXeSiPMSD_h 1
 
-#include "LXeHistoManager.hh"
-#include "LXeRun.hh"
+#include "LXeSiPMHit.hh"
 
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
+#include "G4VSensitiveDetector.hh"
 
-LXeRunAction::LXeRunAction()
+class G4Step;
+class G4HCofThisEvent;
+
+class LXeSiPMSD : public G4VSensitiveDetector
 {
-  // Book predefined histograms
-  fHistoManager = new LXeHistoManager();
-}
+    public:
+        LXeSiPMSD(G4String name);
+        ~LXeSiPMSD() override = default;
 
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
+        void Initialize(G4HCofThisEvent*) override;
+        G4bool ProcessHits(G4Step* aStep, G4TouchableHistory*) override;
+        G4bool ProcessHits_boundary(const G4Step*, G4TouchableHistory*);
+    private:
+        LXeSiPMHitsCollection* fSiPMCollection = nullptr;
+        G4int fHitsCID = -1;
+};
 
-LXeRunAction::~LXeRunAction()
-{
-  delete fHistoManager;
-}
-
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-G4Run* LXeRunAction::GenerateRun()
-{
-  fRun = new LXeRun();
-  return fRun;
-}
-
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-
-void LXeRunAction::BeginOfRunAction(const G4Run*)
-{
-  G4AnalysisManager* analysisManager = G4AnalysisManager::Instance();
-  analysisManager->SetFileName("myhistos");
-  if (analysisManager->IsActive()) {
-    analysisManager->OpenFile("myhistos");
-  }
-}
-
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-
-void LXeRunAction::EndOfRunAction(const G4Run*)
-{
-  if (isMaster) fRun->EndOfRun();
-
-  // save histograms
-  G4AnalysisManager* analysisManager = G4AnalysisManager::Instance();
-  if (analysisManager->IsActive()) {
-    analysisManager->Write();
-    analysisManager->CloseFile();
-  }
-}
+#endif

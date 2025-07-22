@@ -74,7 +74,7 @@ class LXePMTSD : public G4VSensitiveDetector
     G4DataVector* fPMTPositionsY = nullptr;
     G4DataVector* fPMTPositionsZ = nullptr;
 
-    G4int fHitCID = -1;
+    G4int fHitCID = -1.;
 };
 
 #endif

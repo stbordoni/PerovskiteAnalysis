@@ -58,19 +58,91 @@ LXeMainVolume::LXeMainVolume(G4RotationMatrix* pRot, const G4ThreeVector& tlate,
     fConstructor(c)
 {
   CopyValues();
+  G4LogicalVolume* temp_log = GetLogicalVolume();
 
-  G4double housing_x = fScint_x + 2. * fD_mtl;
-  G4double housing_y = fScint_y + 2. * fD_mtl;
-  G4double housing_z = fScint_z + 2. * fD_mtl;
+  G4double housing_x = 15;//fScint_x + fD_mtl;
+  G4double housing_y = 15;//fScint_y + fD_mtl;
+  G4double housing_z = 15;//fScint_z + 5. * fD_mtl; // changed from fScint_z + 2. * fD_mtl for all
 
   //*************************** housing and scintillator
   fScint_box = new G4Box("scint_box", fScint_x / 2., fScint_y / 2., fScint_z / 2.);
   fHousing_box = new G4Box("housing_box", housing_x / 2., housing_y / 2., housing_z / 2.);
 
   fScint_log = new G4LogicalVolume(fScint_box, G4Material::GetMaterial("LXe"), "scint_log");
-  fHousing_log = new G4LogicalVolume(fHousing_box, G4Material::GetMaterial("Al"), "housing_log");
+  fHousing_log = new G4LogicalVolume(fHousing_box, G4Material::GetMaterial("Vacuum"), "housing_log"); // Changed Al to Vacuum
 
-  new G4PVPlacement(nullptr, G4ThreeVector(), fScint_log, "scintillator", fHousing_log, false, 0);
+  auto envVisAttr = new G4VisAttributes(G4Colour(1.0, 0.0, 0.0, 0.6));
+  envVisAttr->SetForceSolid(true);
+  fScint_log->SetVisAttributes(envVisAttr);
+  
+  // Define SiPM dimensions (half thickness)
+  G4double sipmThickness = 0.68 * mm;
+  G4double sipmLength = 6.02 * mm;
+  G4double sipmWidth = 6.03 * mm;
+
+  G4double pocketThickness = 0.01 * mm;
+
+  // Coating and Gold foil
+  G4double pdms_thickness = 1.0 * mm;
+  G4double pdms_x = fScint_x + pdms_thickness;
+  G4double pdms_y = fScint_y + pdms_thickness;
+  G4double pdms_z = fScint_z + 2 * sipmThickness; //+ 2 * pdms_thickness;
+
+  G4double gold_thickness = 0.05 * mm;
+  G4double gold_x = gold_thickness;
+  G4double gold_y = fScint_y;
+  G4double gold_z = fScint_z;
+
+  fPDMS_box = new G4Box("PDMS_box", pdms_x/2, pdms_y/2, pdms_z/2);
+  fAg_Box = new G4Box("Ag_box", gold_x / 2, gold_y / 2, gold_z / 2);
+
+  fPDMS_log = new G4LogicalVolume(fPDMS_box, G4Material::GetMaterial("PDMS"), "PDMS_log");
+  fAg_log = new G4LogicalVolume(fAg_Box, G4Material::GetMaterial("Ag"), "Ag_log");
+
+  G4VisAttributes* pdmsVisAttr = new G4VisAttributes(G4Colour(1.0, 0.5, 0.0, 0.75));
+  pdmsVisAttr->SetVisibility(true);
+  pdmsVisAttr->SetForceSolid(true);
+  fPDMS_log->SetVisAttributes(pdmsVisAttr);
+
+  G4VisAttributes* AgVisAttr = new G4VisAttributes(G4Colour(1.0, 1.0, 0.0, 1));
+  AgVisAttr->SetVisibility(true);
+  AgVisAttr->SetForceSolid(true);
+  fAg_log->SetVisAttributes(AgVisAttr);
+
+  new G4PVPlacement(nullptr, G4ThreeVector(), fHousing_log, "housing_phys", temp_log, false, 0);
+
+  new G4PVPlacement(nullptr, G4ThreeVector(), fPDMS_log, "pdms_phys", fHousing_log, false, 0);
+
+  new G4PVPlacement(nullptr, G4ThreeVector(-fScint_x / 2 - gold_thickness / 2, 0, 0), fAg_log, "gold_negX", fPDMS_log, false, 0);
+  new G4PVPlacement(nullptr, G4ThreeVector(fScint_x / 2 + gold_thickness / 2, 0, 0), fAg_log, "gold_posX", fPDMS_log, false, 1);
+
+  // Define SiPM solid and logical volume
+  fSipm_box = new G4Box("SiPM_solid", sipmLength/2, sipmWidth/2, sipmThickness/2);
+  fSipm_log = new G4LogicalVolume(fSipm_box, G4Material::GetMaterial("Si"), "SiPM_log");
+  G4VisAttributes* greenVisAttr = new G4VisAttributes(G4Colour(0.0, 0.5, 0.0, 0.9));
+  greenVisAttr->SetVisibility(true);
+  greenVisAttr->SetForceSolid(true);
+  fSipm_log->SetVisAttributes(greenVisAttr);
+
+  // Define Air pocket btwn SiPM and Crystal
+  auto fPocket_box = new G4Box("Pocket_solid", sipmLength/2, sipmWidth/2, pocketThickness/2);
+  auto fPocket_log = new G4LogicalVolume(fPocket_box, G4Material::GetMaterial("Air"), "Pocket_log");
+  G4VisAttributes* airVisAttr = new G4VisAttributes(G4Colour(1.0, 1.0, 1.0, 0.4));
+  airVisAttr->SetVisibility(true);
+  airVisAttr->SetForceSolid(true);
+  fPocket_log->SetVisAttributes(airVisAttr);
+
+  // Place the Crystal
+  auto scintPhysical = new G4PVPlacement(nullptr, G4ThreeVector(), fScint_log, "scintillator", fPDMS_log, false, 0);
+  
+  // Position SiPM right behind crystal along z
+  G4double sipmPosZ = 1.36 * mm + sipmThickness / 2;
+  auto sipmPhysical = new G4PVPlacement(nullptr, G4ThreeVector(0, 0, sipmPosZ), fSipm_log, "SiPM", fPDMS_log, false, 0);
+
+  // Position Air Pocket right between crystal and SiPM
+  G4double pocketPosZ = 1.355 * mm; //1.36 * mm + pocketThickness / 2;
+  auto pocketPhysical = new G4PVPlacement(nullptr, G4ThreeVector(0, 0, pocketPosZ), fPocket_log, "Pocket", fScint_log, false, 0);
+
 
   //*************** Miscellaneous sphere to demonstrate skin surfaces
   fSphere = new G4Sphere("sphere", 0., 2. * cm, 0. * deg, 360. * deg, 0. * deg, 360. * deg);
@@ -91,15 +163,15 @@ LXeMainVolume::LXeMainVolume(G4RotationMatrix* pRot, const G4ThreeVector& tlate,
   // the "photocathode" is a metal slab at the back of the glass that
   // is only a very rough approximation of the real thing since it only
   // absorbs or detects the photons based on the efficiency set below
-  fPhotocath = new G4Tubs("photocath_tube", innerRadius_pmt, fOuterRadius_pmt, height_pmt / 2.,
-                          startAngle_pmt, spanningAngle_pmt);
+  fPhotocath = fSipm_box; //new G4Tubs("photocath_tube", innerRadius_pmt, fOuterRadius_pmt, height_pmt / 2.,
+                          //startAngle_pmt, spanningAngle_pmt); //
+                        
 
   fPmt_log = new G4LogicalVolume(fPmt, G4Material::GetMaterial("Glass"), "pmt_log");
-  fPhotocath_log = new G4LogicalVolume(fPhotocath, G4Material::GetMaterial("Al"), "photocath_log");
+  fPhotocath_log =  fSipm_log; //new G4LogicalVolume(fPhotocath, G4Material::GetMaterial("Si"), "housing_log"); //
 
-  new G4PVPlacement(nullptr, G4ThreeVector(0., 0., -height_pmt / 2.), fPhotocath_log, "photocath",
-                    fPmt_log, false, 0);
-
+  //new G4PVPlacement(nullptr, G4ThreeVector(0., 0., -height_pmt / 2.), fPhotocath_log, "photocath",
+  //                  fPmt_log, false, 0);
   //***********Arrange pmts around the outside of housing**********
 
   G4double dx = fScint_x / fNx;
@@ -142,7 +214,6 @@ LXeMainVolume::LXeMainVolume(G4RotationMatrix* pRot, const G4ThreeVector& tlate,
 
   VisAttributes();
   SurfaceProperties();
-
   SetLogicalVolume(fHousing_log);
 }
 
@@ -187,7 +258,7 @@ void LXeMainVolume::PlacePMTs(G4LogicalVolume* pmt_log, G4RotationMatrix* rot, G
     b = bmin;
     for (G4int i = 1; i <= nb; ++i) {
       b += db;
-      new G4PVPlacement(rot, G4ThreeVector(x, y, z), pmt_log, "pmt", fHousing_log, false, k);
+      //new G4PVPlacement(rot, G4ThreeVector(x, y, z), pmt_log, "pmt", fHousing_log, false, k);
       fPmtPositions.push_back(G4ThreeVector(x, y, z));
       ++k;
     }
@@ -233,18 +304,20 @@ void LXeMainVolume::SurfaceProperties()
 
   //**Photocathode surface properties
   std::vector<G4double> photocath_EFF = {1., 1.};
-  std::vector<G4double> photocath_ReR = {1.92, 1.92};
-  std::vector<G4double> photocath_ImR = {1.69, 1.69};
+  std::vector<G4double> photocath_REF = {0., 0.};
+  std::vector<G4double> photocath_ReR = {1.92, 1.92}; //from 1.92, 1.92
+  std::vector<G4double> photocath_ImR = {1.69, 1.69}; //from 1.69, 1.69
   auto photocath_mt = new G4MaterialPropertiesTable();
   photocath_mt->AddProperty("EFFICIENCY", ephoton, photocath_EFF);
   photocath_mt->AddProperty("REALRINDEX", ephoton, photocath_ReR);
   photocath_mt->AddProperty("IMAGINARYRINDEX", ephoton, photocath_ImR);
+  //photocath_mt->AddProperty("REFLECTIVITY", ephoton, photocath_REF);
   auto photocath_opsurf =
-    new G4OpticalSurface("photocath_opsurf", glisur, polished, dielectric_metal);
+    new G4OpticalSurface("photocath_opsurf", unified, polished, dielectric_metal);
   photocath_opsurf->SetMaterialPropertiesTable(photocath_mt);
 
   //**Create logical skin surfaces
-  new G4LogicalSkinSurface("photocath_surf", fHousing_log, OpScintHousingSurface);
+  //new G4LogicalSkinSurface("photocath_surf", fHousing_log, OpScintHousingSurface);
   new G4LogicalSkinSurface("sphere_surface", fSphere_log, OpSphereSurface);
   new G4LogicalSkinSurface("photocath_surf", fPhotocath_log, photocath_opsurf);
 }
